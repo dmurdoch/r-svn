@@ -299,6 +299,7 @@ Rd2HTML <-
              dynamic = FALSE, no_links = FALSE, fragment=FALSE,
              stylesheet = if (dynamic) "/doc/html/R.css" else "R.css",
              texmath = getOption("help.htmlmath"),
+    	     concordance = FALSE,
              ...)
 {
     ## Is this package help, as opposed to from Rdconv or similar?
@@ -344,11 +345,18 @@ Rd2HTML <-
             writeLines(x, con, useBytes = TRUE, ...)
         }
     }
-
+    if (concordance)
+    	conc <- newConcordance()
+    else
+    	conc <- NULL
+    
     of0 <- function(...)
-        writeLinesUTF8(paste0(...), con, outputEncoding, sep = "")
-    of1 <- function(text)
+        of1(paste0(...))
+    of1 <- function(text) {
+    	if (concordance)
+    	    conc$addToConcordance(text)
         writeLinesUTF8(text, con, outputEncoding, sep = "")
+    }
 
     pendingClose <- pendingOpen <- character()  # Used for infix methods
 
@@ -573,6 +581,8 @@ Rd2HTML <-
     }
 
     writeBlock <- function(block, tag, blocktag) {
+    	if (concordance)
+    	    conc$saveSrcref(block)
         doParas <- (blocktag %notin% c("\\tabular"))
 	switch(tag,
                UNKNOWN =,
@@ -748,9 +758,13 @@ Rd2HTML <-
 
 	leavePara(NA)
 	of1('\n<table>\n')
+	if (concordance)
+	    conc$saveSrcref(table)
         newrow <- TRUE
         newcol <- TRUE
         for (i in seq_along(tags)) {
+            if (concordance)
+                conc$saveSrcref(content[[i]])
             if (newrow) {
             	of1("<tr>\n ")
             	newrow <- FALSE
@@ -795,6 +809,8 @@ Rd2HTML <-
 	    i <- i + 1
             tag <- tags[i]
             block <- blocks[[i]]
+            if (concordance)
+            	conc$saveSrcref(block)
             if (length(pendingOpen)) { # Handle $, [ or [[ methods
             	if (tag == "RCODE" && startsWith(block, "(")) {
             	    block <- sub("^\\(", "", block)
@@ -916,7 +932,8 @@ Rd2HTML <-
         save <- sectionLevel
         sectionLevel <<- sectionLevel + 1L
     	of1(paste0("\n\n<h", sectionLevel+2L, ">"))
-
+        if (concordance)
+            conc$saveSrcref(section)
     	if (tag == "\\section" || tag == "\\subsection") {
     	    title <- section[[1L]]
     	    section <- section[[2L]]
@@ -1044,6 +1061,8 @@ Rd2HTML <-
 	name <- htmlify(Rd[[2L]][[1L]])
         firstAlias <-
             trimws(Rd[[ which(sections == "\\alias")[1] ]][[1]])
+	if (concordance)
+            conc$saveSrcref(.Rd_get_section(Rd, "title"))
         of0('<!DOCTYPE html>',
             "<html>",
 	    '<head><title>')
@@ -1084,6 +1103,8 @@ Rd2HTML <-
 	of1("<h2>")
 	inPara <- NA
 	title <- Rd[[1L]]
+	if (concordance)
+	    conc$saveSrcref(title)
 	writeContent(title,sections[1])
 	of1("</h2>")
 	inPara <- FALSE
@@ -1103,6 +1124,14 @@ Rd2HTML <-
         if (enhancedHTML && length(PRISM_JS) == 1L) of0('<script src="', urlify(PRISM_JS), '"></script>\n')
         of0('</body></html>\n')
     }
+    if (concordance) {
+    	concdata <- conc$finish(Rdfile)
+    	attr(out, "concordance") <- concdata
+    	of0('<!-- ', 
+    	    concordanceToString(concordance = concdata, targetfile = out),
+    	    ' -->')
+    }
+    	
     invisible(out)
 } ## Rd2HTML()
 

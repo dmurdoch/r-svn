@@ -23,7 +23,16 @@ function(f, tidy = "tidy") {
                             z))
     m <- unique(do.call(rbind, m[lengths(m) == 4L]))
     p <- m[, 2L]
-    cbind(line = p, col = m[, 3L], msg = m[, 4L], txt = s[as.numeric(p)])
+    if (grepl("^<!-- concordance:", s[length(s)])) 
+    	concordance <- stringToConcordance(s[length(s)])
+    else
+        concordance <- NULL
+    result <- cbind(line = p, col = m[, 3L], msg = m[, 4L], txt = s[as.numeric(p)])
+    
+    if (!is.null(concordance))
+    	result <- cbind(result, matchConcordance(p, targetfile = f, concordance = concordance))
+    
+    result
 }
 
 tidy_validate_db <-
@@ -132,7 +141,7 @@ tidy_validate_package_Rd_files_from_dir <- function(dir, auto = NA, verbose) {
         results <-
             lapply(db,
                    function(x) {
-                       tools::Rd2HTML(x, out)
+                       tools::Rd2HTML(x, out, concordance = TRUE)
                        tidy_validate(out)
                    })
         tidy_validate_db(results,
