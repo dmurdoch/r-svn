@@ -41,10 +41,7 @@ getFunction <- function(name, generic = TRUE, mustFind = TRUE,
     found <- FALSE
     where <- as.environment(where)
     f <- NULL
-    ## parent.env sequence of a namespace ends in the base package namespace,
-    ## of a non-namespace ends in NULL (equiv. to base environment) [sigh]
-    lastEnv <- if(isNamespace(where)) function(where) isBaseNamespace(where)
-               else                   function(where) identical(where, baseenv())
+    lastEnv <- function(where) identical(where, emptyenv())
     repeat {
         if(!is.null(f <- get0(name, envir = where, mode = "function", inherits = FALSE)))
             found <- generic || !is(f, "genericFunction")

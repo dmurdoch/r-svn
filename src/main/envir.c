@@ -3681,7 +3681,7 @@ SEXP R_FindPackageEnv(SEXP info)
 
 Rboolean R_IsNamespaceEnv(SEXP rho)
 {
-    if (rho == R_BaseNamespace)
+    if (rho == R_BaseNamespace || rho == R_BaseEnv)
 	return TRUE;
     else if (TYPEOF(rho) == ENVSXP) {
 	SEXP info = findVarInFrame3(rho, R_NamespaceSymbol, TRUE);

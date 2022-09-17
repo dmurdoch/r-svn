@@ -102,7 +102,7 @@ frameTypes <- function(env) {
     nn <- 0
     if (isNamespace(env)) {
         while (! identical(env, .GlobalEnv)) {
-            if (!isNamespace(env)) {
+            if (!isNamespace(env) && !identical(env, baseenv())) {
                 name <- attr(env, "name")
                 if (!is.character(name) || !startsWith(name, "imports:"))
                     stop("non-namespace found within namespace environments")
