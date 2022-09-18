@@ -1,8 +1,6 @@
 #!/bin/sh
 brew install gcc gettext gmp isl jpeg libmpc libpng mpfr pcre2 pkg-config readline xz texinfo wget
 
-set -e # stop on error
-
 # Set some variables, not all strictly needed.
 export FC="/usr/local/bin/gfortran"
 export PATH="/Library/TeX/texbin:/usr/local/opt/texinfo/bin:$PATH"
@@ -18,6 +16,8 @@ sed -i.bak 's|$(GIT) svn info|./.github/workflows/svn-info.sh|' Makefile.in
 # Update recommended packages
 ./.github/workflows/wget-recommended.sh
 ./.github/workflows/svn-info.sh
+
+set -e # stop on error
 
 # Configure and build
 export PDFLATEX="${PWD}/.github/workflows/dummy"
