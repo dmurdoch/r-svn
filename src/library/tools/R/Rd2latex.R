@@ -83,7 +83,7 @@ Rd2latex <- function(Rd, out = "", defines = .Platform$OS.type,
     }
 
     if (concordance)
-    	conc <- newConcordance()
+    	conc <- activeConcordance()
     else
     	conc <- NULL
     
@@ -719,8 +719,11 @@ Rd2latex <- function(Rd, out = "", defines = .Platform$OS.type,
     if (encode_warn)
 	warnRd(Rd, Rdfile, "Some input could not be re-encoded to ",
 	       outputEncoding)
-    if (concordance)
-    	out <- conc$save(out, Rdfile)
+    if (concordance) {
+    	conc$srcFile <- Rdfile
+        concdata <- followConcordance(conc$finish(), attr(Rd, "concordance"))
+        attr(out, "concordance") <- concdata
+    }
 
     invisible(structure(out, latexEncoding = latexEncoding,
                         hasFigures = hasFigures))

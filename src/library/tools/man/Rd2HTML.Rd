@@ -174,7 +174,7 @@ For \code{Rd2HTML} and \code{Rd2latex} with \code{concordance = TRUE}, a
   first one corresponding to the Rd file.}
   \item{srcLines}{For each line of output after the offset,
 the corresponding input line number.}
-  \item{srcFile}{The name of the input file.}
+  \item{srcFile}{Also for each line, the name of the input file.}
 }
 \author{
   Duncan Murdoch, Brian Ripley

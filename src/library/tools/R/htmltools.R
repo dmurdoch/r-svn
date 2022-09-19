@@ -23,14 +23,11 @@ function(f, tidy = "tidy") {
                             z))
     m <- unique(do.call(rbind, m[lengths(m) == 4L]))
     p <- m[, 2L]
-    if (grepl("^<!-- concordance:", s[length(s)])) 
-    	concordance <- stringToConcordance(s[length(s)])
-    else
-        concordance <- NULL
+    concordance <- stringsToConcordance(grep("^<!-- concordance:", s, value = TRUE))
     result <- cbind(line = p, col = m[, 3L], msg = m[, 4L], txt = s[as.numeric(p)])
     
     if (!is.null(concordance))
-    	result <- cbind(result, matchConcordance(p, targetfile = f, concordance = concordance))
+    	result <- cbind(result, matchConcordance(p, concordance = concordance))
     
     result
 }

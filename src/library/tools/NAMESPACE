@@ -13,7 +13,7 @@ export("Adobe_glyphs", "HTMLheader", "Rcmd", "Rd2HTML", "Rd2ex",
        checkRdContents,
        "checkTnF", "checkVignettes", "codoc", "codocClasses",
        "codocData", "compactPDF", "delimMatch", "deparseLatex",
-       "concordanceToString",
+       "concordanceToStrings",
        "dependsOnPkgs", "encoded_text_to_latex", "file_ext",
        "file_path_as_absolute", "file_path_sans_ext", "findHTMLlinks",
        "find_gs_cmd", "getBibstyle", "getVignetteInfo",
@@ -32,7 +32,7 @@ export("Adobe_glyphs", "HTMLheader", "Rcmd", "Rd2HTML", "Rd2ex",
        "parseLatex", "parse_Rd",
        "pkgVignettes", "pskill", "psnice", "read.00Index",
        "resaveRdaFiles", "showNonASCII", "showNonASCIIfile",
-       "startDynamicHelp", "stringToConcordance", "testInstalledBasic",
+       "startDynamicHelp", "stringsToConcordance", "testInstalledBasic",
        "testInstalledPackage", "testInstalledPackages", "texi2dvi",
        "texi2pdf", "toHTML", "toRd", "toTitleCase", "undoc",
        "update_pkg_po", "vignetteEngine",
@@ -132,6 +132,8 @@ S3method("print", "subdir_tests", .print.via.format)
 S3method("print", "undoc", .print.via.format)
 S3method("print", "xgettext")
 S3method("print", "xngettext")
+S3method("print", "activeConcordance")
+S3method("print", "concordance")
 
 S3method("print", "checkRdContents", .print.via.format)
 S3method("print", "check_Rd_line_widths", .print.via.format)

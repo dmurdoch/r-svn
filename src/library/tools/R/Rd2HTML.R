@@ -345,8 +345,9 @@ Rd2HTML <-
             writeLines(x, con, useBytes = TRUE, ...)
         }
     }
+    
     if (concordance)
-    	conc <- newConcordance()
+    	conc <- activeConcordance()
     else
     	conc <- NULL
     
@@ -978,7 +979,6 @@ Rd2HTML <-
     	con <- out
     	out <- summary(con)$description
     }
-
     Rd <- prepare_Rd(Rd, defines = defines, stages = stages,
                      fragment = fragment, ...)
     ## Check if man page already uses mathjaxr package
@@ -1125,13 +1125,13 @@ Rd2HTML <-
         of0('</body></html>\n')
     }
     if (concordance) {
-    	concdata <- conc$finish(Rdfile)
+    	conc$srcFile <- Rdfile
+    	concdata <- followConcordance(conc$finish(), attr(Rd, "concordance"))
     	attr(out, "concordance") <- concdata
-    	of0('<!-- ', 
-    	    concordanceToString(concordance = concdata, targetfile = out),
-    	    ' -->')
+    	of0(paste0('<!-- ', 
+    	    concordanceToStrings(concdata),
+    	    ' -->\n'))
     }
-    	
     invisible(out)
 } ## Rd2HTML()
 
