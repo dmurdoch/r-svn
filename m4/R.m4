@@ -1062,7 +1062,7 @@ AC_DEFUN([R_PROG_FC_CHAR_LEN_T],
       call xerbla('abcde', -10)
       end
 EOF
-${FC} ${FFLAGS} -c conftestf.f 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD
+${FC} ${FFLAGS} ${FPIEFLAGS} -c conftestf.f 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD
 [cat > conftest.c <<EOF
 /* A C function calling a Fortran subroutine which calls xerbla
    written in C, emulating how R calls BLAS/LAPACK routines */
@@ -4277,7 +4277,7 @@ fi
 
 ## R_STDCXX
 ## --------
-## Support for C++ standards (C++11, C++14, C++17, C++20), for use in packages.
+## Support for C++ standards (C++11, C++14, C++17, C++20, C++23), for use in packages.
 ## R_STDCXX(VERSION, PREFIX, DEFAULT)
 AC_DEFUN([R_STDCXX],
 [r_save_CXX="${CXX}"
