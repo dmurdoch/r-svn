@@ -2,14 +2,19 @@
 \alias{matchConcordance}
 \alias{concordanceToStrings}
 \alias{stringsToConcordance}
+\alias{Rconcordance}
+\alias{activeConcordance}
 \title{
-Match source and target lines using a concordance.
+Concordance between source and target lines.
 }
 \description{
 The Rd parser records locations in \file{.Rd} files from
 which components of the file are read.  Output generators
-\code{\link{Rd2HTML}} and \code{\link{Rd2latex}} can match these to
-output lines.  \code{matchConcordance} converts from output locations
+\code{\link{Rd2HTML}} and \code{\link{Rd2latex}} can output
+information about these locations as \dQuote{concordances} between
+source and output lines.  
+
+\code{matchConcordance} converts from output locations
 to source locations.  \code{concordanceToStrings} produces
 strings to embed in output files, and \code{stringsToConcordance}
 converts these back to objects that can be interpreted
@@ -25,7 +30,8 @@ stringsToConcordance(strings)
 One or more line numbers being queried.
 }
   \item{concordance}{
-The concordance data for the file containing the lines.
+The concordance data for the file containing the lines: an object
+of class \code{"Rconcordance"}.
 }
   \item{targetfile}{
 The output filename.  
@@ -64,6 +70,8 @@ are used by \code{Rd2HTML} and \code{Rd2latex} while building the output
 file and saving links to the source file.
 
 Objects of class \code{"Rconcordance"} are visible to users.
+See the source code for their current format, which is subject to
+change.
 
 Concordance strings are produced by \code{concordanceToStrings}; 
 they are simply character vectors encoding the concordance data.
@@ -77,7 +85,7 @@ For \code{concordanceToStrings}, a character vector similar to
 the ones used in \code{\link{Sweave}} to embed 
 the concordance in a file.
 
-For \code{stringsToConcordance}, a concordance object, or \code{NULL}
+For \code{stringsToConcordance}, an \code{"Rconcordance"} object, or \code{NULL}
 if no concordance strings are found.
 }
 \author{
