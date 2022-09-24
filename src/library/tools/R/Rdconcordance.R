@@ -3,7 +3,7 @@
 #
 # 1.  The "activeConcordance" is an environment used to build a 
 #     concordance one string at a time.  
-# 2.  The "concordance" is a list object.
+# 2.  The "Rconcordance" is a list object.
 # 3.  "String concordances" are representations of concordance
 #     objects suitable for embedding in text files.
 
@@ -52,7 +52,7 @@ activeConcordance <- function(srcfile = NA_character_)
 	    
 	    structure(list(offset = offset, srcLines = srcLinenum,
 	    	           srcFile = srcFile), 
-	    	      class = "concordance")
+	    	      class = "Rconcordance")
 	}
 		
 	structure(environment(), class = "activeConcordance")
@@ -67,7 +67,7 @@ print.activeConcordance <- function(x, ...) {
     invisible(x)
 }
 
-print.concordance <- function(x, ...) {
+print.Rconcordance <- function(x, ...) {
     df <- data.frame(srcFile = x$srcFile, srcLines = x$srcLines)
     rownames(df) <- seq_len(nrow(df)) + x$offset
     print(df)

@@ -11,7 +11,8 @@ which components of the file are read.  Output generators
 \code{\link{Rd2HTML}} and \code{\link{Rd2latex}} can match these to
 output lines.  \code{matchConcordance} converts from output locations
 to source locations.  \code{concordanceToStrings} produces
-strings to embed in output files that can be interpreted
+strings to embed in output files, and \code{stringsToConcordance}
+converts these back to objects that can be interpreted
 by \code{matchConcordance}.
 }
 \usage{
@@ -62,7 +63,7 @@ Objects of class \code{"activeConcordance"} are internal to \pkg{tools}; they
 are used by \code{Rd2HTML} and \code{Rd2latex} while building the output
 file and saving links to the source file.
 
-Objects of class \code{"concordance"} are visible to users.
+Objects of class \code{"Rconcordance"} are visible to users.
 
 Concordance strings are produced by \code{concordanceToStrings}; 
 they are simply character vectors encoding the concordance data.

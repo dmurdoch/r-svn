@@ -133,7 +133,7 @@ S3method("print", "undoc", .print.via.format)
 S3method("print", "xgettext")
 S3method("print", "xngettext")
 S3method("print", "activeConcordance")
-S3method("print", "concordance")
+S3method("print", "Rconcordance")
 
 S3method("print", "checkRdContents", .print.via.format)
 S3method("print", "check_Rd_line_widths", .print.via.format)
