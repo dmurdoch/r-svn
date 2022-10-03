@@ -23,7 +23,7 @@ function(f, tidy = "tidy") {
                             z))
     m <- unique(do.call(rbind, m[lengths(m) == 4L]))
     p <- m[, 2L]
-    concordance <- stringsToConcordance(grep("^<!-- concordance:", s, value = TRUE))
+    concordance <- as.Rconcordance(grep("^<!-- concordance:", s, value = TRUE))
     result <- cbind(line = p, col = m[, 3L], msg = m[, 4L], txt = s[as.numeric(p)])
     
     if (!is.null(concordance))

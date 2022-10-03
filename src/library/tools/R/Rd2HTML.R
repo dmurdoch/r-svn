@@ -1130,7 +1130,7 @@ Rd2HTML <-
     	concdata <- followConcordance(conc$finish(), attr(Rd, "concordance"))
     	attr(out, "concordance") <- concdata
     	of0(paste0('<!-- ', 
-    	    concordanceToStrings(concdata),
+    	    as.character(concdata),
     	    ' -->\n'))
     }
     invisible(out)

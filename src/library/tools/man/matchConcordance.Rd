@@ -1,7 +1,8 @@
 \name{matchConcordance}
 \alias{matchConcordance}
-\alias{concordanceToStrings}
-\alias{stringsToConcordance}
+\alias{as.character.Rconcordance}
+\alias{as.Rconcordance}
+\alias{as.Rconcordance.default}
 \alias{Rconcordance}
 \alias{activeConcordance}
 \title{
@@ -15,15 +16,17 @@ information about these locations as \dQuote{concordances} between
 source and output lines.  
 
 \code{matchConcordance} converts from output locations
-to source locations.  \code{concordanceToStrings} produces
-strings to embed in output files, and \code{stringsToConcordance}
+to source locations.  The \code{"Rconcordance"} method of
+\code{as.character} produces
+strings to embed in output files, and the default method of 
+\code{as.Rconcordance}
 converts these back to objects that can be interpreted
 by \code{matchConcordance}.
 }
 \usage{
 matchConcordance(linenum, concordance)
-concordanceToStrings(concordance, targetfile = "")
-stringsToConcordance(strings)	          
+\method{as.character}{Rconcordance}(x, ...)
+as.Rconcordance(x, ...)
 }
 \arguments{
   \item{linenum}{
@@ -37,7 +40,8 @@ of class \code{"Rconcordance"}.
 The output filename.  
   }
   \item{strings}{
-A character vector which contains output from \code{concordanceToStrings}, typically in comments.
+A character vector which contains output from the \code{"Rconcordance"}
+method of \code{as.character}, typically in comments.
   }
 }
 \details{
@@ -55,12 +59,13 @@ depend on the source, e.g. when an error is found in the
 output file.  When more than one line contributes
 to the output, the last one will be returned.
 
-\code{concordanceToStrings} converts a concordance object
+The \code{"Rconcordance"} method of \code{as.character} converts a
+concordance object
 to strings suitable for embedding (e.g. in comments) in an
 output file.
 
-\code{stringsToConcordance} searches for strings matching the
-pattern of \code{concordanceToStrings} output, then converts
+The default method of \code{as.Rconcordance} searches for strings matching the
+pattern of \code{as.character.Rconcordance} output, then converts
 those lines back to a single concordance.
 
 There are 3 kinds of objects used to hold concordances.  
@@ -73,7 +78,8 @@ Objects of class \code{"Rconcordance"} are visible to users.
 See the source code for their current format, which is subject to
 change.
 
-Concordance strings are produced by \code{concordanceToStrings}; 
+Concordance strings are produced by the \code{"Rconcordance"} method of
+\code{as.character}; 
 they are simply character vectors encoding the concordance data.
 }
 \value{
@@ -81,11 +87,11 @@ they are simply character vectors encoding the concordance data.
 per input \code{linenum} entry and
 two columns, \code{"srcFile"} and \code{"srcLine"}.
 
-For \code{concordanceToStrings}, a character vector similar to 
-the ones used in \code{\link{Sweave}} to embed 
+For the \code{"Rconcordance"} method of \code{as.character}, a character
+vector used (e.g. in \code{\link{Sweave}}) to embed 
 the concordance in a file.
 
-For \code{stringsToConcordance}, an \code{"Rconcordance"} object, or \code{NULL}
+For \code{as.concordance}, an \code{"Rconcordance"} object, or \code{NULL}
 if no concordance strings are found.
 }
 \author{

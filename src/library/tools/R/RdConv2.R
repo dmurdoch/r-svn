@@ -448,7 +448,7 @@ prepare_Rd <-
 	    if (stage %in% stages)
 		Rd <- processRdSexprs(Rd, stage, options, macros=attr(Rd, "macros"))
 	if (is.null(concordance))
-	    concordance <- stringsToConcordance(unlist(Rd[RdTags(Rd) == "COMMENT"]))
+	    concordance <- as.Rconcordance(unlist(Rd[RdTags(Rd) == "COMMENT"]))
 	if (pratt < 2L && stage2)
 	    Rd <- prepare2_Rd(Rd, Rdfile, stages)
 	meta <- attr(Rd, "meta")

@@ -103,8 +103,10 @@ matchConcordance <- function(linenum, concordance) {
 # This function converts concordance objects to string representations
 # of them.  
 
-concordanceToStrings <- function(concordance,
-			      targetfile = "") {
+as.character.Rconcordance <- function(x,
+			      targetfile = "",
+			      ...) {
+    concordance <- x
     offset <- concordance$offset
     src <- concordance$srcLines
     
@@ -135,12 +137,16 @@ concordanceToStrings <- function(concordance,
     result    
 }
 
+as.Rconcordance <- function(x, ...) {
+    UseMethod("as.Rconcordance")  
+}
+
 # This takes concordance strings and combines them
 # into one concordance object.
 
-stringsToConcordance <- function(strings) {
+as.Rconcordance.default <- function(x, ...) {
     # clean comments etc.
-    s <- sub("^.*(concordance){1}?", "concordance", sub("[^[:digit:]]*$", "", strings))
+    s <- sub("^.*(concordance){1}?", "concordance", sub("[^[:digit:]]*$", "", x))
     s <- grep("^concordance:", s, value = TRUE)
     if (!length(s))
     	return(NULL)
