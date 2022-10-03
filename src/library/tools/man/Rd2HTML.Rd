@@ -168,13 +168,8 @@ Rd2ex(Rd, out = "", defines = .Platform$OS.type,
   form suitable for use with the LaTeX \samp{inputenc} package.
   
 For \code{Rd2HTML} and \code{Rd2latex} with \code{concordance = TRUE}, a 
-\code{"concordance"} attribute is added, containing
-  a list with three entries:
-  \item{offset}{The number of lines written before the
-  first one corresponding to the Rd file.}
-  \item{srcLines}{For each line of output after the offset,
-the corresponding input line number.}
-  \item{srcFile}{Also for each line, the name of the input file.}
+\code{"concordance"} attribute is added, containing an
+\code{\link{Rconcordance}} object.
 }
 \author{
   Duncan Murdoch, Brian Ripley

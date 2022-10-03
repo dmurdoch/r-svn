@@ -1,3 +1,23 @@
+##  File src/library/tools/R/Rconcordance.R
+##  Part of the R package, https://www.R-project.org
+##
+## Copyright (C) 1995-2016 The R Core Team
+## Copyright (C) 2022 Duncan Murdoch
+##
+##  This program is free software; you can redistribute it and/or modify
+##  it under the terms of the GNU General Public License as published by
+##  the Free Software Foundation; either version 2 of the License, or
+##  (at your option) any later version.
+##
+##  This program is distributed in the hope that it will be useful,
+##  but WITHOUT ANY WARRANTY; without even the implied warranty of
+##  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+##  GNU General Public License for more details.
+##
+##  A copy of the GNU General Public License is available at
+##  https://www.R-project.org/Licenses/
+
+
 # There are three kinds of objects used when working with
 # concordances.  
 #
@@ -50,7 +70,7 @@ activeConcordance <- function(srcfile = NA_character_)
 	    if (length(srcLinenum) && (len <- nchar(lastText)) && substr(lastText, len, len) == "\n")
 		srcLinenum <- srcLinenum[-length(srcLinenum)]
 	    
-	    structure(list(offset = offset, srcLines = srcLinenum,
+	    structure(list(offset = offset, srcLine = srcLinenum,
 	    	           srcFile = srcFile), 
 	    	      class = "Rconcordance")
 	}
@@ -68,7 +88,7 @@ print.activeConcordance <- function(x, ...) {
 }
 
 print.Rconcordance <- function(x, ...) {
-    df <- data.frame(srcFile = x$srcFile, srcLines = x$srcLines)
+    df <- data.frame(srcFile = x$srcFile, srcLine = x$srcLines)
     rownames(df) <- seq_len(nrow(df)) + x$offset
     print(df)
     invisible(x)
@@ -80,10 +100,10 @@ print.Rconcordance <- function(x, ...) {
 # file.
 
 matchConcordance <- function(linenum, concordance) {
-    if (!all(c("offset", "srcLines", "srcFile") %in% names(concordance)))
+    if (!all(c("offset", "srcLine", "srcFile") %in% names(concordance)))
 	stop("concordance is not valid")
     linenum <- as.numeric(linenum)
-    srcLines <- concordance$srcLines
+    srcLines <- concordance$srcLine
     srcFile <- rep_len(concordance$srcFile, length(srcLines))
     offset <- concordance$offset
     
@@ -95,7 +115,7 @@ matchConcordance <- function(linenum, concordance) {
 	    result[i,] <- c("", "")
 	else
 	    result[i,] <- c(basename(srcFile[linenum[i] - offset]), 
-	    		      with(concordance, srcLines[linenum[i] - offset]))
+	    		      with(concordance, srcLine[linenum[i] - offset]))
     }
     result
 }
@@ -103,12 +123,22 @@ matchConcordance <- function(linenum, concordance) {
 # This function converts concordance objects to string representations
 # of them.  
 
+## The string has three or four parts, separated by colons:
+## 1.  The output .tex filename
+## 2.  The input .Rnw filename
+## 3.  Optionally, the starting line number of the output coded as "ofs nn",
+##     where nn is the offset to the first output line.  This is omitted if nn is 0.
+## 4.  The input line numbers corresponding to each output line.
+##     This are compressed using the following simple scheme:
+##     The first line number, followed by
+##     a run-length encoded diff of the rest of the line numbers.
+
 as.character.Rconcordance <- function(x,
 			      targetfile = "",
 			      ...) {
     concordance <- x
     offset <- concordance$offset
-    src <- concordance$srcLines
+    src <- concordance$srcLine
     
     result <- character()
     
@@ -123,10 +153,10 @@ as.character.Rconcordance <- function(x,
         
         vals <- with(rle(diff(src[seq_len(n)])), as.numeric(rbind(lengths, values)))
         result <- c(result, paste0("concordance:", 
-               basename(targetfile), ":",
-               basename(srcfile[1]), ":",
+               targetfile, ":",
+               srcfile[1], ":",
                if (offset) paste0("ofs ", offset, ":"),
-               concordance$srcLines[1], " ",
+               concordance$srcLine[1], " ",
                paste(vals, collapse = " ")
                ))
         offset <- offset + n
@@ -176,7 +206,7 @@ stringToConcordance <- function(s) {
     rle <- structure(list(lengths=rledata[1,], values=rledata[2,]), class="rle")
     diffs <- inverse.rle(rle)
     srcLines <- c(firstline, firstline + cumsum(diffs))
-    structure(list(offset = ofs, srcFile = srcFile, srcLines = srcLines),
+    structure(list(offset = ofs, srcFile = srcFile, srcLine = srcLines),
     	      class = "concordance")
 }
 
@@ -186,10 +216,10 @@ stringToConcordance <- function(s) {
 addConcordance <- function(conc, s) {
     prev <- stringToConcordance(s)
     if (!is.null(prev)) {
-    	conc$srcFile <- rep_len(conc$srcFile, length(conc$srcLines))
-        i <- seq_along(prev$srcLines)
+    	conc$srcFile <- rep_len(conc$srcFile, length(conc$srcLine))
+        i <- seq_along(prev$srcLine)
         conc$srcFile[prev$offset + i] <- prev$srcFile
-        conc$srcLines[prev$offset + i] <- prev$srcLines
+        conc$srcLine[prev$offset + i] <- prev$srcLine
     }
     conc
 }
@@ -199,11 +229,11 @@ addConcordance <- function(conc, s) {
 
 followConcordance <- function(conc, prevConcordance) {
     if (!is.null(prevConcordance)) {
-    	curLines <- conc$srcLines
+    	curLines <- conc$srcLine
     	curFile <- rep_len(conc$srcFile, length(curLines))
     	curOfs <- conc$offset
     	
-    	prevLines <- prevConcordance$srcLines
+    	prevLines <- prevConcordance$srcLine
     	prevFile <- rep_len(prevConcordance$srcFile, length(prevLines))
     	prevOfs <- prevConcordance$offset
     	
@@ -222,7 +252,7 @@ followConcordance <- function(conc, prevConcordance) {
 		
 	conc$srcFile <- ifelse(new, curFile,
 			       prevFile[curLines])
-	conc$srcLines <- ifelse(new, curLines,
+	conc$srcLine <- ifelse(new, curLines,
 				prevLines[curLines])
     }
     conc

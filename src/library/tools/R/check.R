@@ -5067,7 +5067,7 @@ add_dummies <- function(dir, Log)
                                     sub("[Rr]d$", "html", results2[, "path"]),
                                     results2[, "line"],
                                     results2[, "col"],
-                            	    results2[, "srcFile"],
+                            	    basename(results2[, "srcFile"]),
                             	    results2[, "srcLine"],
                                     results2[, "msg"])))
             }

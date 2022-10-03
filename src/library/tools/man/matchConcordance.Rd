@@ -1,3 +1,8 @@
+% File src/library/tools/man/matchConcordance.Rd
+% Part of the R package, https://www.R-project.org
+% Copyright 2022 Duncan Murdoch
+% Distributed under GPL 2 or later
+
 \name{matchConcordance}
 \alias{matchConcordance}
 \alias{as.character.Rconcordance}
@@ -75,12 +80,24 @@ are used by \code{Rd2HTML} and \code{Rd2latex} while building the output
 file and saving links to the source file.
 
 Objects of class \code{"Rconcordance"} are visible to users.
-See the source code for their current format, which is subject to
-change.
+They are list objects with the following three fields:
+\describe{
+  \item{\code{offset}}{The number of lines of output before the
+  first one corresponding to this concordance.}
+  \item{\code{srcLine}}{For each line of output after the offset,
+the corresponding input file line number.  There may be more lines
+of output than the length of \code{srcLine}, in which case nothing
+can be inferred about the source of those lines.}
+  \item{\code{srcFile}}{A vector of filenames of length 1 or the
+same length as \code{srcLine} giving the source file(s) for
+each output line.}
+}
 
 Concordance strings are produced by the \code{"Rconcordance"} method of
 \code{as.character}; 
 they are simply character vectors encoding the concordance data.
+The default method of the \code{as.concordance} generic function 
+converts them to \code{"Rconcordance"} objects.
 }
 \value{
 \code{matchConcordance} returns a character array with one row 
