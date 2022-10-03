@@ -5432,17 +5432,20 @@ qqline(I(1:12))
 ## More "rational" as.character() for <octmode> and <hexmode>,
 ## fulfilling the "law"   as.<vector>(x)[j]  ===  as.<vector>(x[j])
 i <- matrix(0:21, 2)
-hi <- as.character(as.hexmode(i))
-oi <- as.character(as.octmode(i))
+FT <- c(FALSE,TRUE); names(FT) <- c("F", "T")
+hiL <- lapply(FT, function(kp) as.character(as.hexmode(i), keepStr = kp))
+oiL <- lapply(FT, function(kp) as.character(as.octmode(i), keepStr = kp))
 stopifnot(exprs = {
-    identical(dim (hi), dim(i))
-    identical(nrow(oi), nrow(i))
+    identical(dim (hiL[["T"]]), dim(i))
+    identical(nrow(oiL[["T"]]), nrow(i))
+    identical(hi <- hiL[["F"]], as.vector(hiL[["T"]])) ; is.null(dim(hi))
+    identical(oi <- oiL[["F"]], as.vector(oiL[["T"]])) ; is.null(dim(oi))
     hi[1:8] == as.character(0:7)
     oi[1:8] == hi[1:8]
   c(nchar(hi)) == rep(1:2, c(16,6))
   c(nchar(oi)) == rep(1:2, c(8,14))
 })
-## as.character.*() methods had used format() previously
+## as.character.*() methods had used format() previously; now by default drop, dim() etc
 
 
 ## within.list() & within.data.frame() assumed setdiff(a, b) to always eval 'b'
@@ -6092,6 +6095,69 @@ tools::Rd2txt(rd, out <- textConnection(NULL, "w"), fragment = TRUE)
 stopifnot(any(as.character(rd) != "\n"),
           identical(textConnectionValue(out)[2L], "LaTeX")); close(out)
 ## empty output in R <= 4.2.x
+
+
+## as.POSIXlt(<very large Date>)  gave integer overflow
+stopifnot(as.POSIXlt(.Date(2^31 + 10))$year == 5879680L)
+## year was negative in R <= 4.2.1
+
+
+## as.Date(<nonfinite_POSIXlt>) :
+D <- .Date(c(7:20)*1000)
+D[15:18] <- c(Inf, -Inf, NA, NaN); D
+stopifnot( identical(D, as.Date(as.POSIXlt(D))) )
+## non-finite POSIXlt gave all  NA in R <= 4.2.1
+##
+## POSIX[cl]t: keeping names, also w/ factors; is.finite() ...
+(D <- setNames(D, LETTERS[seq_along(D)]))
+fD <- factor(D)
+stopifnot(exprs = {
+    identical(fD, as.factor(D))
+    identical(names(D), names(fD))
+    ## identical(D, as.Date(fD)) -- FIXME
+    identical(D, as.Date(Dct <- as.POSIXct(D))) # also checks names(.) are kept
+    identical(D, as.Date(Dlt <- as.POSIXlt(D)))
+    identical(as.character(D), as.character(Dlt))
+    identical(      format(D),       format(Dlt) -> frmD)
+    identical(names(D), names(frmD))
+    (DeD <- Dlt == Dct)[ok <- is.finite(D)]
+    identical(is.na(DeD), is.na(D))
+    identical(as.character(D), unname(frmD))
+    identical(unname(ok), is.finite(as.numeric(D)))
+    identical(ok, is.finite(Dct))
+    identical(ok, is.finite(Dlt))     # now works for POSIXlt
+    identical(is.nan(D), is.nan(Dlt))
+    identical(is.infinite(D), is.infinite(Dlt))
+    identical(D == -Inf, Dlt == -Inf)
+})
+## is.finite() now works for POSIXlt
+
+## as.POSIX?t(<POSIX?t>, tz=*) now works, too:
+stopifnot(inherits(Dct, "POSIXct"),
+          inherits(Dlt, "POSIXlt"))
+Sys.getenv("TZ")  #  "Australia/Melbourne"   (set above)
+mtz <- "UTC-5"
+head(Dct2  <- as.POSIXct(Dct, tz = mtz), 3)
+head(Dlt2  <- as.POSIXlt(Dlt, tz = mtz), 3) ## these three POISXlt "are different"
+head(Dlct2 <- as.POSIXlt(Dct2),          3)
+head(Dlct  <- as.POSIXlt(Dct) ,          3)
+no_tz <- function(.) `attr<-`(., "tzone", NULL)
+stopifnot(exprs = {
+    identical(mtz, attr(Dct2, "tzone"))
+    identical(mtz, attr(Dlt2, "tzone"))
+    (Dct2 - Dct)[ok] == 0
+    identical(no_tz(Dct2), no_tz(Dct))
+    identical(no_tz(Dlt2), no_tz(Dlt))
+    ## However (!!)
+    (Dct2  - Dct)[ok] == 0
+    ## Have 2 groups" which are "equal":  { Dlt "==" Dlct "==" Dlct2 } and  Dlt2  which differs by 5
+    (Dlt2  - Dlt )[ok] == -5L # !!!
+    (Dlct2 - Dlt )[ok] == 0L
+    (Dlct  - Dlt )[ok] == 0L
+    (Dlct  - Dlt2)[ok] == 5L
+})
+## both methods return(x)ed immediately, when class "matched"
+
 
 
 ## keep at end
