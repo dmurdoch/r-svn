@@ -242,6 +242,7 @@ as.POSIXlt.POSIXct <- function(x, tz = "", ...)
 as.POSIXlt.factor <- function(x, ...)
 {
     y <- as.POSIXlt(as.character(x), ...)
+    ## as.character(.) dropping names ===>
     names(y$year) <- names(x)
     y
 }
@@ -295,7 +296,9 @@ as.POSIXlt.numeric <- function(x, tz = "", origin, ...)
 
 as.POSIXlt.default <- function(x, tz = "", optional = FALSE, ...)
 {
-    if(inherits(x, "POSIXlt")) return(x)
+    if(inherits(x, "POSIXlt"))
+        return(if(nargs() == 1L || (missing(tz) && ...length() == 0L)) x
+               else .POSIXlt(x, tz, ...))
     if(is.null(x)) return(as.POSIXlt.character(character(), tz))
     if(is.logical(x) && all(is.na(x)))
         return(as.POSIXlt(as.POSIXct.default(x), tz = tz))
@@ -361,7 +364,9 @@ as.POSIXct.numeric <- function(x, tz = "", origin, ...)
 
 as.POSIXct.default <- function(x, tz = "", ...)
 {
-    if(inherits(x, "POSIXct")) return(x)
+    if(inherits(x, "POSIXct"))
+        return(if(nargs() == 1L || (missing(tz) && ...length() == 0L)) x
+               else .POSIXct(x, tz, ...))
     if(is.null(x)) return(.POSIXct(numeric(), tz))
     if(is.character(x) || is.factor(x))
 	return(as.POSIXct(as.POSIXlt(x, tz, ...), tz, ...))
@@ -394,7 +399,7 @@ format.POSIXlt <- function(x, format = "", usetz = FALSE,
 	times <- unlist(unclass(x)[1L:3L])[f0]
 	secs <- x$sec[f0]; secs <- secs[is.finite(secs)]
         np <- if(is.null(digits)) 0L else min(6L, digits)
-        if(np >= 1L)
+        if(np >= 1L) # no unnecessary trailing '0' :
             for (i in seq_len(np)- 1L)
                 if(all( abs(secs - round(secs, i)) < 1e-6 )) {
                     np <- i
@@ -585,7 +590,37 @@ function(x, ..., value) {
     .POSIXct(NextMethod(.Generic), attr(x, "tzone"), oldClass(x))
 }
 
-as.character.POSIXt <- function(x, ...) format(x, ...)
+## Alternatively use  lapply(*, function(.) .Internal(format.POSIXlt(., digits=0))
+## *and* append the fractional seconds ('entirely') ..
+as.character.POSIXt <- function(x, ...) {
+    if(length(dotn <- ...names()) && "format" %in% dotn)
+        warning("as.character(td, ..) no longer obeys a 'format' argument; use format(td, ..) ?")
+    x <- as.POSIXlt(x)
+    s <- x$sec
+    ## to distinguish {NA, 0, non-0}:
+    time <- x$hour + x$min + s
+    isNA <- is.na(s) & !is.nan(s)
+    ok <- is.finite(time)
+    r <- character(length(ok))
+    if(anyN <- !all(ok)) { # i.e.,  any(!ok)
+        r[   !ok &  isNA] <- NA
+        i <- !ok & !isNA
+        r[i] <- as.character(s[i])
+    }
+    if(any(ok)) {
+        if(anyN) { x <- x[ok]; time <- time[ok] }
+        s <- trunc(x$sec)
+        fs <- x$sec - s
+        r1 <- sprintf("%d-%02d-%02d", 1900 + x$year, x$mon+1L, x$mday)
+        if(any(n0 <- time != 0)) # add time if not 0
+            r1[n0] <- paste(r1[n0],
+                        sprintf("%02d:%02d:%02d%s", x$hour[n0], x$min[n0], s[n0],
+                                substr(as.character(fs[n0]), 2L, 32L)))
+        r[ok] <- r1
+    }
+    r
+}
+
 
 as.data.frame.POSIXct <- as.data.frame.vector
 
@@ -598,8 +633,11 @@ as.list.POSIXct <- function(x, ...)
     y
 }
 
-is.na.POSIXlt <- function(x)
-    is.na(as.POSIXct(x))
+is.na.POSIXlt       <- function(x) is.na      (as.POSIXct(x))
+is.nan.POSIXlt      <- function(x) is.nan     (as.POSIXct(x))
+is.finite.POSIXlt   <- function(x) is.finite  (as.POSIXct(x))
+is.infinite.POSIXlt <- function(x) is.infinite(as.POSIXct(x))
+
 anyNA.POSIXlt <- function(x, recursive = FALSE)
     anyNA(as.POSIXct(x))
 
@@ -621,7 +659,7 @@ c.POSIXlt <- function(..., recursive = FALSE) {
 
 ISOdatetime <- function(year, month, day, hour, min, sec, tz = "")
 {
-    if(min(vapply(list(year, month, day, hour, min, sec), length, 1, USE.NAMES=FALSE)) == 0L)
+    if(min(lengths(list(year, month, day, hour, min, sec), use.names=FALSE)) == 0L)
         .POSIXct(numeric(), tz = tz)
     else {
         x <- paste(year, month, day, hour, min, sec, sep = "-")

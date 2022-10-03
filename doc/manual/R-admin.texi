@@ -3804,6 +3804,9 @@ session by package @CRANpkg{flexiblas}.  Apparently undocumented:
 FlexiBLAS on Fedora provides a complete LAPACK, but not the enhanced
 routines from ATLAS or OpenBLAS.
 
+BLAS implementations which use parallel computations can be
+non-deterministic: this is known for ATLAS.
+
 @menu
 * ATLAS::
 * OpenBLAS and BLIS::
@@ -3871,7 +3874,6 @@ hyperthreaded CPUs without restricting affinities at compile-time to one
 virtual core per physical CPU.  (For the Fedora libraries the
 compile-time flag specifies 4 threads.)
 @c http://math-atlas.sourceforge.net/atlas_install/node21.html
-
 
 @node OpenBLAS and BLIS, MKL, ATLAS, BLAS
 @subsubsection OpenBLAS and BLIS
@@ -4999,15 +5001,15 @@ which can be overcome by setting
 FPIEFLAGS=-fPIE
 @end example
 @noindent
-in @file{config.site}. This has sufficed for both default and
-shared-library builds.
+in @file{config.site}. (As from @R{} 4.2.2 @command{configure} tries
+that value if it is unset.)
 
-It is recommended to use C flag @option{-Wno-strict-prototypes}
-(disabling a C23 feature) if using @code{-pedantic} in @command{clang}
-15.0.0 and later, as @R{} is not yet optimized for C23.  For more detail
-see the release notes at
-@uref{https://releases.llvm.org/15.0.0/tools/clang/docs/ReleaseNotes.html#id9},
-under `improvements to diagnostics'..
+@c It is recommended to use C flag @option{-Wno-strict-prototypes}
+@c (disabling a C23 feature) if using @code{-pedantic} in @command{clang}
+@c 15.0.0 and later, as @R{} is not yet optimized for C23.  For more detail
+@c see the release notes at
+@c @uref{https://releases.llvm.org/15.0.0/tools/clang/docs/ReleaseNotes.html#id9},
+@c under `improvements to diagnostics'..
 
 @c This was about 'Classic Flang'.  The newer version is not
 @c yet able to compile Fortran.
@@ -5257,6 +5259,7 @@ installers mentioned below, use a file @file{config.site} containing
 CC=clang
 OBJC=$CC
 FC="$LOCAL/gfortran/bin/gfortran -mtune=native"
+CPPFLAGS='-isystem $LOCAL/include'
 CXX=clang++
 @end example
 @noindent

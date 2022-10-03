@@ -78,7 +78,6 @@ static int ParseBrowser(SEXP, SEXP);
 static void R_ReplFile(FILE *fp, SEXP rho)
 {
     ParseStatus status;
-    int count=0;
     int savestack;
     RCNTXT cntxt;
 
@@ -94,7 +93,6 @@ static void R_ReplFile(FILE *fp, SEXP rho)
 	    R_Visible = FALSE;
 	    R_EvalDepth = 0;
 	    resetTimeLimits();
-	    count++;
 	    PROTECT(R_CurrentExpr);
 	    R_CurrentExpr = eval(R_CurrentExpr, rho);
 	    SET_SYMVALUE(R_LastvalueSymbol, R_CurrentExpr);
@@ -325,7 +323,7 @@ static void R_ReplConsole(SEXP rho, int savestack, int browselevel)
 
 static unsigned char DLLbuf[CONSOLE_BUFFER_SIZE+1], *DLLbufp;
 
-static void check_session_exit()
+static void check_session_exit(void)
 {
     if (! R_Interactive) {
 	/* This funtion will be called again after a LONGJMP if an
