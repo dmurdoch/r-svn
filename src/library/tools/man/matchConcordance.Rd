@@ -30,7 +30,7 @@ by \code{matchConcordance}.
 }
 \usage{
 matchConcordance(linenum, concordance)
-\method{as.character}{Rconcordance}(x, ...)
+\method{as.character}{Rconcordance}(x, targetfile = "", ...)
 as.Rconcordance(x, ...)
 }
 \arguments{
@@ -44,9 +44,12 @@ of class \code{"Rconcordance"}.
   \item{targetfile}{
 The output filename.  
   }
-  \item{strings}{
-A character vector which contains output from the \code{"Rconcordance"}
-method of \code{as.character}, typically in comments.
+  \item{x}{
+The object to convert:  for \code{as.character}, an \code{"Rconcordance"} object; for \code{as.concordance},
+a character vector which contains \code{as.character} output, typically in comments.
+  }
+  \item{...}{
+Further arguments passed to other methods.
   }
 }
 \details{
