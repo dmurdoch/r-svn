@@ -88,7 +88,7 @@ print.activeConcordance <- function(x, ...) {
 }
 
 print.Rconcordance <- function(x, ...) {
-    df <- data.frame(srcFile = x$srcFile, srcLine = x$srcLines)
+    df <- data.frame(srcFile = x$srcFile, srcLine = x$srcLine)
     rownames(df) <- seq_len(nrow(df)) + x$offset
     print(df)
     invisible(x)
@@ -207,7 +207,7 @@ stringToConcordance <- function(s) {
     diffs <- inverse.rle(rle)
     srcLines <- c(firstline, firstline + cumsum(diffs))
     structure(list(offset = ofs, srcFile = srcFile, srcLine = srcLines),
-    	      class = "concordance")
+    	      class = "Rconcordance")
 }
 
 # This modifies an existing concordance object to incorporate
