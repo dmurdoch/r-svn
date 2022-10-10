@@ -221,11 +221,12 @@ Sys.timezone <- function(location = TRUE)
 
 as.POSIXlt <- function(x, tz = "", ...) UseMethod("as.POSIXlt")
 
-as.POSIXlt.Date <- function(x, ...) {
-    if(any((y <- unclass(x)) > .Machine$integer.max, na.rm = TRUE))
-        as.POSIXlt(.POSIXct(y * 86400), tz = "UTC")
-    else
-        .Internal(Date2POSIXlt(x))
+as.POSIXlt.Date <- function(x, tz = "UTC", ...) {
+    as.POSIXlt(if(any((y <- unclass(x)) > .Machine$integer.max, na.rm = TRUE))
+                   .POSIXct(y * 86400)
+               else
+                   .Internal(Date2POSIXlt(x))
+             , tz = tz)
 }
 
 ## ## Moved to packages date and chron.
@@ -281,24 +282,14 @@ as.POSIXlt.character <-
 }
 
 as.POSIXlt.numeric <- function(x, tz = "", origin, ...)
-{
-    if(missing(origin)) {
-        if(!length(x))
-            return(as.POSIXlt.character(character(), tz))
-        if(!any(is.finite(x)))
-            return(as.POSIXlt.character(rep_len(NA_character_,
-                                                length(x)),
-                                        tz))
-        stop("'origin' must be supplied")
-    }
-    as.POSIXlt(as.POSIXct(origin, tz = "UTC", ...) + x, tz = tz)
-}
+    as.POSIXlt(if(missing(origin)) .POSIXct(x, tz)
+               else as.POSIXct(origin, tz = "UTC", ...) + x,
+               tz)
 
 as.POSIXlt.default <- function(x, tz = "", optional = FALSE, ...)
 {
     if(inherits(x, "POSIXlt"))
-        return(if(nargs() == 1L || (missing(tz) && ...length() == 0L)) x
-               else .POSIXlt(x, tz, ...))
+        return(if(missing(tz)) x else .POSIXlt(x, tz))
     if(is.null(x)) return(as.POSIXlt.character(character(), tz))
     if(is.logical(x) && all(is.na(x)))
         return(as.POSIXlt(as.POSIXct.default(x), tz = tz))
@@ -313,7 +304,8 @@ as.POSIXlt.default <- function(x, tz = "", optional = FALSE, ...)
 
 as.POSIXct <- function(x, tz = "", ...) UseMethod("as.POSIXct")
 
-as.POSIXct.Date <- function(x, ...) .POSIXct(unclass(x)*86400)
+as.POSIXct.Date <- function(x, tz = "UTC", ...) .POSIXct(unclass(x)*86400, tz=tz)
+                                        #  \\\ do *not* pass these
 
 ## ## Moved to package date
 ## as.POSIXct.date <- function(x, ...)
@@ -342,31 +334,18 @@ as.POSIXct.POSIXlt <- function(x, tz = "", ...)
 {
     tzone <- attr(x, "tzone")
     if(missing(tz) && !is.null(tzone)) tz <- tzone[1L]
-    ## <FIXME>
-    ## Move names handling to C code eventually ...
     y <- .Internal(as.POSIXct(x, tz))
-    names(y) <- names(x$year)
+    ## FIXME: already do handling of 'tz' in C code  !?!
     .POSIXct(y, tz)
-    ## </FIXME>
 }
 
 as.POSIXct.numeric <- function(x, tz = "", origin, ...)
-{
-    if(missing(origin)) {
-        if(!length(x))
-            return(.POSIXct(numeric(), tz))
-        if(!any(is.finite(x)))
-            return(.POSIXct(x, tz))
-        stop("'origin' must be supplied")
-    }
-    .POSIXct(as.POSIXct(origin, tz = "GMT", ...) + x, tz)
-}
+    .POSIXct(if(missing(origin)) x else as.POSIXct(origin, tz = "GMT", ...) + x, tz)
 
 as.POSIXct.default <- function(x, tz = "", ...)
 {
     if(inherits(x, "POSIXct"))
-        return(if(nargs() == 1L || (missing(tz) && ...length() == 0L)) x
-               else .POSIXct(x, tz, ...))
+        return(if(missing(tz)) x else .POSIXct(x, tz))
     if(is.null(x)) return(.POSIXct(numeric(), tz))
     if(is.character(x) || is.factor(x))
 	return(as.POSIXct(as.POSIXlt(x, tz, ...), tz, ...))
@@ -410,12 +389,7 @@ format.POSIXlt <- function(x, format = "", usetz = FALSE,
 	    else if(np == 0L) "%Y-%m-%d %H:%M:%S"
 	    else paste0("%Y-%m-%d %H:%M:%OS", np)
     }
-    ## <FIXME>
-    ## Move names handling to C code eventually ...
-    y <- .Internal(format.POSIXlt(x, format, usetz))
-    names(y) <- names(x$year)
-    y
-    ## </FIXME>
+    .Internal(format.POSIXlt(x, format, usetz))
 }
 
 ## prior to 2.9.0 the same as format.POSIXlt.
@@ -424,15 +398,11 @@ strftime <- function(x, format = "", tz = "", usetz = FALSE, ...)
     format(as.POSIXlt(x, tz = tz), format = format, usetz = usetz, ...)
 
 strptime <- function(x, format, tz = "")
-{
-    ## <FIXME>
-    ## Move names handling to C code eventually ...
-    y <- .Internal(strptime(as.character(x), format, tz))
-    ## Assuming we can rely on the names of x ...
-    names(y$year) <- names(x)
-    y
-    ## </FIXME>
-}
+    .Internal(strptime(if(is.character(x)) x # not losing names(.) here
+                       else if(is.object(x)) `names<-`(as.character(x), names(x))
+                       else                  `storage.mode<-`(x, "character"),
+                       format, tz))
+
 
 format.POSIXct <- function(x, format = "", tz = "", usetz = FALSE, ...)
 {
@@ -592,9 +562,14 @@ function(x, ..., value) {
 
 ## Alternatively use  lapply(*, function(.) .Internal(format.POSIXlt(., digits=0))
 ## *and* append the fractional seconds ('entirely') ..
-as.character.POSIXt <- function(x, ...) {
+as.character.POSIXt <- function(x, # digits after decimal:
+                                digits = if(inherits(x, "POSIXlt")) 14L else 6L,
+                                OutDec = ".", # *not* depending on options() !
+                                ...) {
     if(length(dotn <- ...names()) && "format" %in% dotn)
         warning("as.character(td, ..) no longer obeys a 'format' argument; use format(td, ..) ?")
+    if(missing(digits)) force(digits)
+    else if(!is.numeric(digits)) stop("'digits' must be numeric, integer valued")
     x <- as.POSIXlt(x)
     s <- x$sec
     ## to distinguish {NA, 0, non-0}:
@@ -609,13 +584,16 @@ as.character.POSIXt <- function(x, ...) {
     }
     if(any(ok)) {
         if(anyN) { x <- x[ok]; time <- time[ok] }
-        s <- trunc(x$sec)
-        fs <- x$sec - s
         r1 <- sprintf("%d-%02d-%02d", 1900 + x$year, x$mon+1L, x$mday)
-        if(any(n0 <- time != 0)) # add time if not 0
-            r1[n0] <- paste(r1[n0],
-                        sprintf("%02d:%02d:%02d%s", x$hour[n0], x$min[n0], s[n0],
-                                substr(as.character(fs[n0]), 2L, 32L)))
+        if(any(n0 <- time != 0)) { # add time if not 0
+            s <- round(x$sec[n0], digits) # now, assume s >= 0 :
+            ## ensure options() do *not* affect as.character():
+            if(getOption("OutDec") != OutDec) { op <- options(OutDec = OutDec); on.exit(options(op)) }
+            if(getOption("scipen") <= min(digits)) {
+                o2 <- options(scipen = max(digits)+1L); on.exit(options(o2), add=TRUE) }
+            sch <- paste0(c("","0")[(s < 10) + 1L], as.character(s))
+            r1[n0] <- paste(r1[n0], sprintf("%02d:%02d:%s", x$hour[n0], x$min[n0], sch))
+        }
         r[ok] <- r1
     }
     r

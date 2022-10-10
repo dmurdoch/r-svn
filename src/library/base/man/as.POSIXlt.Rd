@@ -45,6 +45,7 @@ as.POSIXlt(x, tz = "", \dots)
 
 \method{as.POSIXct}{Date}(x, tz = "UTC", \dots)
 \method{as.POSIXlt}{Date}(x, tz = "UTC", \dots)
+\method{as.POSIXct}{numeric}(x, tz = "", origin, \dots)
 
 \method{as.double}{POSIXlt}(x, \dots)
 }
@@ -63,7 +64,8 @@ as.POSIXlt(x, tz = "", \dots)
   \item{optional}{\code{\link{logical}} indicating to return \code{NA}
     (instead of signalling an error) if the format guessing does not succeed.}
   \item{origin}{a date-time object, or something which can be coerced by
-    \code{as.POSIXct(tz = "GMT")} to such an object.}
+    \code{as.POSIXct(tz = "GMT")} to such an object.  Optional since \R
+    4.3.0, where the equivalent of \code{"1970-01-01"} is used.}
 }
 \details{
   The \code{as.POSIX*} functions convert an object to one of the two
@@ -86,6 +88,7 @@ as.POSIXlt(x, tz = "", \dots)
   specifications are locale-specific, and you may need to set the
   \code{LC_TIME} category appropriately \emph{via}
   \code{\link{Sys.setlocale}}.  This most often affects the use of
+  \code{\%a}, \code{\%A} (weekday names),
   \code{\%b}, \code{\%B} (month names) and \code{\%p} (AM/PM).
 
   Logical \code{NA}s can be converted to either of the classes, but no
@@ -166,9 +169,9 @@ as.POSIXct(strptime("2010-10-31 01:30:00", "\%Y-\%m-\%d \%H:\%M:\%S"))
 unclass(z)                    # a large integer
 floor(unclass(z)/86400)       # the number of days since 1970-01-01 (UTC)
 (now <- as.POSIXlt(Sys.time())) # the current datetime, as class "POSIXlt"
-unlist(unclass(now))          # a list shown as a named vector
+str(unclass(now))             # the internal list ; use now$hour, etc :
 now$year + 1900               # see ?DateTimeClasses
-months(now); weekdays(now)    # see ?months
+months(now); weekdays(now)    # see ?months; using LC_TIME locale
 
 ## suppose we have a time in seconds since 1960-01-01 00:00:00 GMT
 ## (the origin used by SAS)
