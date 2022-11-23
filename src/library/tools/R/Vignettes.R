@@ -487,12 +487,14 @@ function(package, dir, subdirs = NULL, lib.loc = NULL, output = FALSE,
 
 ### * buildVignettes
 ###
-### Run a weave and pdflatex on all vignettes of a package and try to
-### remove all temporary files that were created.
+### Run a weave and pdflatex on all vignettes of a package
+### (except for those named in 'skip', where TRUE means to skip vignettes
+### with unavailable \VignetteDepends, as used by R CMD check)
+### and try to remove all temporary files that were created.
 ### Exported version, used in R CMD build/check
 buildVignettes <-
     function(package, dir, lib.loc = NULL, quiet = TRUE, clean = TRUE,
-             tangle = FALSE, ser_elibs = NULL)
+             tangle = FALSE, skip = NULL, ser_elibs = NULL)
 {
     separate <- !is.null(ser_elibs)
     if (separate) elibs <- readRDS(ser_elibs)
@@ -516,23 +518,11 @@ buildVignettes <-
              domain = NA)
     }
 
-    ## Check for duplicated titles (which look silly on CRAN pages)
-    titles <- character()
-    for (d in vigns$docs) {
-        this <- c(.get_vignette_metadata(readLines(d, warn = FALSE),
-                                         "IndexEntry"), "")[1L]
-        titles <- c(titles, this)
+    if (isTRUE(skip)) { # look for unavailable \VignetteDepends
+        installed <- rownames(utils::installed.packages())
+    } else if (!is.null(skip)) {
+        if (isFALSE(skip)) skip <- NULL else stopifnot(is.character(skip))
     }
-    have_dup_titles <-
-        if (any(dup <- duplicated(titles))) {
-            dups <- unique(titles[dup])
-            message(ngettext(length(dups),
-                             "duplicated vignette title:",
-                             "duplicated vignette titles:"))
-            message(paste(.pretty_format(dups), collapse = "\n"))
-            message()
-            TRUE
-        } else FALSE
 
     ## unset SWEAVE_STYLEPATH_DEFAULT here to avoid problems
     Sys.unsetenv("SWEAVE_STYLEPATH_DEFAULT")
@@ -561,10 +551,27 @@ buildVignettes <-
     outputs <- character()
     sourceList <- list()
     startdir <- getwd()
+    skipped <- character()
     fails <- character()
     for(i in seq_along(vigns$docs)) {
         thisOK <- TRUE
         file <- basename(vigns$docs[i])
+        name <- vigns$names[i]
+        thisSKIP <- if (isTRUE(skip)) {
+                        vinfo <- vignetteInfo(file)
+                        length(missdeps <- vinfo$depends %w/o% installed) > 0
+                    } else name %in% skip
+        if (thisSKIP) {
+            msg <- if (isTRUE(skip)) .pretty_format2(
+                    sprintf("Note: skipping %s due to unavailable dependencies:",
+                            sQuote(file)),  # grepped in check
+                    missdeps)
+                else gettextf("Note: skipping %s", sQuote(file))
+            message(paste0(c(msg, ""), collapse = "\n"),
+                    domain = NA)
+            skipped <- c(skipped, file)
+            next
+        }
         enc <- vigns$encodings[i]
         if (enc == "non-ASCII") {
             message(gettextf("Error: Vignette '%s' is non-ASCII but has no declared encoding",
@@ -572,7 +579,6 @@ buildVignettes <-
             fails <- c(fails, file)
             next
         }
-        name <- vigns$names[i]
         engine <- vignetteEngine(vigns$engines[i])
 
         if (separate) {  # --- run in separate process
@@ -690,21 +696,11 @@ buildVignettes <-
         message()
     }
 
-
-    msg2 <- paste("Duplicate vignette titles.",
-                  "  Ensure that the %\\VignetteIndexEntry lines in the vignette sources",
-                  "  correspond to the vignette titles.",
-                  sep = "\n")
-
     ## Assert
-    if (length(fails) || (length(outputs) != length(vigns$docs))) {
+    if (length(fails) || (length(outputs) != (length(vigns$docs) - length(skipped)))) {
         msg <- "Vignette re-building failed."
-        if (have_dup_titles) msg <- paste0(msg, "\nError: ", msg2)
         stop(msg, domain = NA, call. = FALSE)
     }
-
-    if (have_dup_titles)
-        stop(msg2, domain = NA, call. = FALSE)
 
     vigns$outputs <- outputs
     vigns$sources <- sourceList

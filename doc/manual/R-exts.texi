@@ -566,7 +566,7 @@ The @samp{UseLTO} logical field is used on a Unix-alike to indicate if
 source code in the package is to be compiled with Link-Time Optimization
 (@pxref{Using Link-time Optimization}) if @R{} was installed with
 @option{--enable-lto} (default true) or @option{--enable-lto=R} (default
-false). This can be overridden by by the flags @option{--use-LTO} and
+false). This can be overridden by the flags @option{--use-LTO} and
 @option{--no-use-LTO}.  LTO is said to give most size and performance
 improvements for large and complex (heavily templated) C++ projects.
 
@@ -2021,7 +2021,7 @@ recipes they give actually work.  (This is especially necessary for
 platforms which use static linking.)
 
 If using Autoconf it is good practice to include all the Autoconf
-sources in the the package (and required for an Open Source package and
+sources in the package (and required for an Open Source package and
 tested by @command{R CMD check --as-cran}).  This will include the file
 @file{configure.ac}@footnote{a decade ago Autoconf used
 @file{configure.in}: this is still accepted but should be renamed and
@@ -3022,7 +3022,7 @@ done by including (or unpacking) the sources in a subdirectory of
 @file{src}, as considered above.
 
 Further issues arise when the external software uses another build
-system such as @command{cmake}, principally to ensure that that
+system such as @command{cmake}, principally to ensure that
 @emph{all} the settings for compilers, include and load paths @emph{etc}
 are made.  This section has already mentioned the need to set
 at least some of
@@ -5206,7 +5206,7 @@ be for binary packages).  Java 8 is available for fewer platforms than
 Java 7 was, and Java 11 for fewer still (at the time of writing, only
 @cputype{x86_64} Linux, macOS, 64-bit Windows and 64-bit Solaris 11 from
 Oracle; Linux on several 64-bit CPUs, Intel and ARM macOS, 32- and
-64-bit Windows and AIX from from @uref{https://adoptium.net/} -- several
+64-bit Windows and AIX from @uref{https://adoptium.net/} -- several
 OSes provide builds of OpenJDK including FreeBSD and most Linux
 distributions).
 
@@ -6075,6 +6075,23 @@ has found quite a number of errors where functions have been declared
 without arguments (a function without arguments should have prototype
 @code{fn(void)}) and is likely to become the default in future
 compilers.  (It already is for LLVM @command{clang} in C23 mode.)
+
+LLVM @command{clang} has a separate warning
+@option{-Wdeprecated-non-prototype} which is enabled by
+@option{-Wstrict-prototypes}.  This warns on K&R-style usage, which will
+not be accepted in C23.
+
+@item
+Several C entry points are warned against in their @command{man} pages
+on most systems, often in very strong terms such as '@strong{Do not use
+these functions}'.  macOS has started to warn@footnote{when using the
+macOS 13 SDK with a deployment target of macOS 13.} if these are used
+for @code{sprintf}, @code{vsprintf}, @code{gets}, @code{mktemp},
+@code{tempmam} and @code{tmpnam}.  It is highly recommended that you use
+safer alternatives (on any platform) but the warning can be avoided by
+defining @samp{_POSIX_C_SOURCE} to for example @samp{200809L} before
+including the (C or C++) header which defines them.  (However, this may
+hide other extensions.)
 
 @end itemize
 
@@ -7556,7 +7573,6 @@ The following example is from @file{Poisson.Rd}:
 
 @iftex
 For the @LaTeX{} manual, this becomes
-@c: Name-and-shame for Brian Diggs:
 @c: this is TeXinfo markup, not the result of the conversions.
 @quotation
 @cartouche
@@ -7952,12 +7968,12 @@ See the @file{system.Rd} file in @file{share/Rd/macros} for more details
 and macro definitions, including macros @code{\packageTitle},
 @code{\packageDescription}, @code{\packageAuthor}, @code{\packageMaintainer},
 @code{\packageDESCRIPTION} and @code{\packageIndices}.
-@findex @code{\packageTitle}
-@findex @code{\packageDescription}
-@findex @code{\packageAuthor}
-@findex @code{\packageMaintainer}
-@findex @code{\packageDESCRIPTION}
-@findex @code{\packageIndices}
+@findex \packageTitle
+@findex \packageDescription
+@findex \packageAuthor
+@findex \packageMaintainer
+@findex \packageDESCRIPTION
+@findex \packageIndices
 
 
 Packages may also define their own common macros; these would be stored
@@ -8095,7 +8111,7 @@ People have also used @LaTeX{} mode in a editor, as @file{.Rd} files are
 rather similar to @LaTeX{} files.
 
 Some @R{} front-ends provide editing support for  @file{.Rd} files, for
-example RStudio (@uref{https://www.rstudio.com/}).
+example RStudio (@uref{https://posit.co/}).
 
 @node Tidying and profiling R code, Debugging, Writing R documentation files, Top
 @chapter Tidying and profiling R code
@@ -8473,35 +8489,8 @@ Options include using @command{sprof} for a shared object, and
 @command{oprofile} (see @uref{https://oprofile.sourceforge.io/news/}) and
 @command{perf} (see
 @uref{https://perf.wiki.kernel.org/index.php/Tutorial}) for any
-executable or shared object.
-
-@subsubsection sprof
-
-You can select shared objects to be profiled with @command{sprof} by
-setting the environment variable @env{LD_PROFILE}.  For example
-
-@example
-% setenv LD_PROFILE /path/to/R_HOME/library/stats/libs/stats.so
-R
-... run the boot example
-% sprof /path/to/R_HOME/library/stats/libs/stats.so \
-  /var/tmp/path/to/R_HOME/library/stats/libs/stats.so.profile
-
-Flat profile:
-
-Each sample counts as 0.01 seconds.
-  %   cumulative   self              self     total
- time   seconds   seconds    calls  us/call  us/call  name
- 76.19      0.32     0.32        0     0.00           numeric_deriv
- 16.67      0.39     0.07        0     0.00           nls_iter
-  7.14      0.42     0.03        0     0.00           getListElement
-
-rm /var/tmp/path/to/R_HOME/library/stats/libs/stats.so.profile
-... to clean up ...
-@end example
-
-It is possible that root access is needed to create the directories used
-for the profile data.
+executable or shared object.  These seem less widely supplied than they
+used to be (for example Fedora 36 only has @command{perf}).
 
 @subsubsection oprofile and operf
 
@@ -8603,6 +8592,10 @@ The profiling data is by default stored in sub-directory
 @file{oprofile_data} of the current directory, which can be removed at
 the end of the session.
 
+Another way to use this is to run @command{operf -s} as root, run the
+@R{} session in another terminal then shut down @command{operf} and
+analyse as above.
+
 Another example, from @CRANpkg{sm} version 2.2-5.4.  The example for
 @code{sm.variogram} took a long time:
 @example
@@ -8678,6 +8671,34 @@ samples  %        symbol name
 
 Shutting down the profiler and clearing the records needs to be done as
 root.
+
+@subsubsection sprof
+
+You can select shared objects to be profiled with @command{sprof} by
+setting the environment variable @env{LD_PROFILE}.  For example
+
+@example
+% setenv LD_PROFILE /path/to/R_HOME/library/stats/libs/stats.so
+R
+... run the boot example
+% sprof /path/to/R_HOME/library/stats/libs/stats.so \
+  /var/tmp/path/to/R_HOME/library/stats/libs/stats.so.profile
+
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total
+ time   seconds   seconds    calls  us/call  us/call  name
+ 76.19      0.32     0.32        0     0.00           numeric_deriv
+ 16.67      0.39     0.07        0     0.00           nls_iter
+  7.14      0.42     0.03        0     0.00           getListElement
+
+rm /var/tmp/path/to/R_HOME/library/stats/libs/stats.so.profile
+... to clean up ...
+@end example
+
+It is possible that root access is needed to create the directories used
+for the profile data.
 
 @node macOS,  , Linux, Profiling compiled code
 @subsection macOS
@@ -9354,7 +9375,8 @@ will give more legible reports.  It has a runtime penalty of 2--3x,
 extended compilation times and uses substantially more memory, often
 1--2GB, at run time.  On 64-bit platforms it reserves (but does not
 allocate) 16--20TB of virtual memory: restrictive shell settings can
-cause problems.
+cause problems.  It can be helpful to increase the stack size, for
+example to 40MB.
 
 By comparison with @command{valgrind}, ASan can
 detect misuse of stack and global variables but not the use of
@@ -12823,12 +12845,14 @@ of the interface they are objects that are already in use.  The macros
   second = CADDR(args);
   third = CADDDR(args);
   fourth = CAD4R(args);
+  fifth  = CAD5R(args);
 @end group
 @end example
 @findex CADR
 @findex CADDR
 @findex CADDDR
 @findex CAD4R
+@findex CAD5R
 
 @noindent
 provide convenient ways to access the first four arguments.  More
@@ -14868,7 +14892,7 @@ The (complete) Beta function and its natural logarithm.
 
 @deftypefun double choose (double @var{n}, double @var{k})
 @deftypefunx double lchoose (double @var{n}, double @var{k})
-The number of combinations of @var{k} items chosen from from @var{n} and
+The number of combinations of @var{k} items chosen from @var{n} and
 the natural logarithm of its absolute value, generalized to arbitrary real
 @var{n}.  @var{k} is rounded to the nearest integer (with a warning if
 needed).

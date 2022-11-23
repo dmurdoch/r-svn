@@ -4427,6 +4427,7 @@ function(package, dir, lib.loc = NULL)
                                          "FALSE"))
     if(use_aliases_from_CRAN) {
         aliases_db <- NULL
+        tried_aliases_db <- FALSE
     }
 
     anchors <- unique(thispkg[have_anchor])
@@ -4483,8 +4484,19 @@ function(package, dir, lib.loc = NULL)
 
         } else if(use_aliases_from_CRAN) {
             if(is.null(aliases_db)) {
+                if (tried_aliases_db) {
+                    unknown <- c(unknown, pkg)
+                    next
+                }
+                tried_aliases_db <- TRUE
                 ## Not yet read in.
-                aliases_db <- CRAN_aliases_db()
+                ## This can fail if e.g. CRAN is updating DB
+                aliases_db <- tryCatch(CRAN_aliases_db(),
+                                       error = function(e) NULL)
+                if (is.null(aliases_db)) {
+                    unknown <- c(unknown, pkg)
+                    next
+                }
             }
             aliases <- aliases_db[[pkg]]
             if(is.null(aliases)) {
@@ -7676,7 +7688,8 @@ function(dir, localOnly = FALSE, pkgSize = NA)
                                          "FALSE"))
     if(!capabilities("libcurl") && remote)
         out$no_url_checks <- TRUE
-    else {
+    else if(is.null(out$Rd_db_build_error)) {
+        ## Skip if building the Rd db failed.
         udb <- url_db_from_package_sources(dir)
         bad <- tryCatch(check_url_db(udb,
                                      remote = remote,
@@ -9299,10 +9312,10 @@ function(x, collapse = " ", q = getOption("useFancyQuotes"))
 .pretty_format2 <-
 function(msg, x, collapse = ", ", useFancyQuotes = FALSE)
 {
-    xx <- strwrap(paste(sQuote(x, q=q), collapse=collapse), exdent = 2L)
+    xx <- strwrap(paste(sQuote(x, q=useFancyQuotes), collapse=collapse), exdent = 2L)
     if (length(xx) > 1L || nchar(msg) + nchar(xx) + 1L > 75L)
         ## trash 'xx', instead wrap w/ 'indent' :
-        c(msg, .pretty_format(x, collapse=collapse, q=q))
+        c(msg, .pretty_format(x, collapse=collapse, q=useFancyQuotes))
     else paste(msg, xx)
 }
 

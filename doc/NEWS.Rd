@@ -77,9 +77,85 @@
       strings, particularly when different elements of the input have
       different encoding (including \code{"bytes"}).
 
+      \item Package repositories in \code{getOption("repos")} are now
+      initialized from the \file{repositories} file when \pkg{utils} is
+      loaded (if not already set, e.g., in \file{.Rprofile}).
+      (From a report and patch proposal by Gabriel Becker in \PR{18405}.)
+
+      \item \code{compactPDF()} gets a \code{verbose} option.
+
+      \item \code{type.convert()} and hence \code{read.table()} get new
+      option \code{tryLogical = TRUE} with back compatible default.  When
+      set to false, converts \code{"F"} or \code{"T"} columns to character.
+
+      \item \code{object.size(*, standard="SI")} uses the new unit prefixes
+      \code{"R"} and \code{"Q"} for sizes above \eqn{10^{27}} bytes, thanks
+      to Henrik Bengtsson's \PR{18435}.
+    }
+  }
+
+  \subsection{DATES and TIMES}{
+      \itemize{
+      \item On platforms where (non-UTC) datetimes before 1902 (or
+      before 1900 as with system functions on recent macOS) are guessed
+      by extrapolating time zones from 1902-2037, there is a warning at
+      the first use of extrapolation in a session.  (As all time zones
+      post 2037 are extrapolation, we do not warn on those.)
+
+      \item (Platforms using \option{--with-internal-tzone}, including
+      Windows and by default macOS). How years are printed in dates or
+      date-times can be controlled by environment variable
+      \env{R_PAD_YEARS_BY_ZERO}.  The default remains to pad to 4 digits
+      by zeroes, but setting value \samp{no} gives no padding (as used
+      by default by \code{glibc}).
+
+      \item \code{strftime()} tries harder to determine the offset for
+      the \code{"\%z"} format, and succeeds on the mainstream \R platforms.
+
+      \item \code{strftime()} has a limit of 2048 bytes on the string
+      produced -- attempting to exceed this is an error.  (Previously it
+      silently truncated at 255 bytes.)
+
+      \item \code{sessionInfo()} records (and by default prints) the
+      system time zone as part of the locale information.  Also, the
+      source (system/internal) of the date-time conversion and printing
+      functions.
+
+      \item Objects of class \code{"POSIXlt"} created in this version of
+      \R always have 11 components: component \code{zone} is always set,
+      and component \code{gmtoff} is set for times in UTC and usually
+      set on the (almost all) platforms which have C-level support,
+      otherwise is \code{NA}.
+
+      \item There are comprehensive validity checks on the structure of
+      objects of class \code{"POSIXlt"} when converting (including
+      formatting and printing).  (This avoids mis-conversions of
+      hand-crafted objects.)
+
+      \item There is some support for using the native date-time
+      routines on macOS: this is only viable on recent versions
+      (e.g.\sspace{}12.6 and 13) and does get wrong some historical changes
+      (before 1900, during WWII).  Use of \option{--with-internal-tzone}
+      remains the default.
+
       \item \code{as.POSIXct(<numeric>)} and \code{as.POSIXlt(.)} (without
       specifying \code{origin}) now work.
-    }
+      So does \code{as.Date(<numeric>)}.
+
+      \item \code{as.Date.POSIXct(., tz)} now treats several \code{tz}
+      values, notably \code{"GMT"} as equivalent to \code{"UTC"}, proposed
+      and improved by Michael Chirico and Joshua Ulrich in \PR{17674}.
+
+      \item Experimental \code{balancePOSIXlt()} utility allows using
+      \dQuote{ragged} and or out-of-range \code{"POSIXlt"} objects more
+      correctly, e.g., in subsetting and subassignments.  Such objects
+      are now documented.
+
+      More experimentally, a \code{"POSIXlt"} object may have an attribute
+      \code{"balanced"} indicating if it is known to be filled or fully
+      balanced.
+
+     }
   }
 
   \subsection{INSTALLATION on a UNIX-ALIKE}{
@@ -108,6 +184,10 @@
       \dQuote{Apple silicon} (\sQuote{M1}), \command{configure} now chooses
       \option{-fPIC} by default (instead of \option{-fpic}), as desired in
       \PR{18326}.
+
+      \item \command{configure} now checks conversion of datetimes
+      between \code{POSIXlt} and \code{POSIXct} around year 2020.  Failure
+      (which has been seen on platforms missing \code{tzdata}) is fatal.
     }
   }
 
@@ -152,10 +232,7 @@
       header no longer includes header \file{limits.h} from C nor
       \file{climits} from C++.
 
-      \item The definition of \code{DL_FUNC} in \file{R_ext/Rdynload.h}
-      has been changed to be fully C-compliant.  This means that
-      functions loaded \emph{via} for example \code{R_GetCCallable} need
-      to be cast to an appropriate type if they have any arguments.
+      \item New macro \code{CAD5R()} is provided and used in a few places.
     }
   }
 
@@ -177,8 +254,8 @@
       and \sQuote{checking CRAN incoming feasibility}.
 
       \item \command{R CMD check} can optionally (but included in
-      \option{--as-cran}) check whether HTML math rendering via KaTeX
-      works for the package \file{.Rd} files.
+      \option{--as-cran}) check whether HTML math rendering \emph{via}
+      KaTeX works for the package \file{.Rd} files.
     }
   }
 
@@ -218,7 +295,7 @@
       name which did preserve names). Reported in \PR{17616}.
 
       \item \code{c(a=1, 2)[[]]} no longer matches \code{2} but rather
-      signals a \emph{classed} error.  Reported and analysed by David Vaughan in
+      signals a \emph{classed} error.  Reported and analysed by Davis Vaughan in
       \PR{18367}, a duplicate of \PR{18004}, by Jan Meis et al.
       For consistency, \code{NULL[[]]} is also erroneous now.
       \code{x[[]] <- v} gives an error of the same class \code{"MissingSubscriptError"}.
@@ -251,22 +328,89 @@
       with defaults \emph{not} depending on \code{options()}.
       Use of \code{as.character(*, format = .)} now warns.
 
-      \item Similarly, the \code{as.character.hexmode()} and \code{*.octmode()}
-      methods also behave as \code{good citizen} methods and back compatibility
-      option \code{keepStr = TRUE}.
+      \item Similarly, the \code{as.character.hexmode()} and
+      \code{*.octmode()} methods also behave as \code{good citizen}
+      methods and back compatibility option \code{keepStr = TRUE}.
 
       \item The \code{as.POSIXlt(<POSIXlt>)} and
       \code{as.POSIXct(<POSIXct>)} default methods now do obey their
       \code{tz} argument, also in this case.
 
-      \item \code{as.POSIXlt(<Date>)} now does apply a \code{tz} (timezone)
+      \item \code{as.POSIXlt(<Date>)} now does apply a \code{tz} (time zone)
       argument, as does \code{as.POSIXct()}; partly suggested by Roland Fuß on
       the R-devel mailing list.
+
+      \item \code{as.Date.POSIXlt(x)} now also works when the list components
+      are of unequal length, aka \dQuote{partially filled} or \dQuote{ragged}.
+
+      \item \code{expand.model.frame()} looked up variables in the wrong
+      environment when applied to models fitted without \code{data}.
+      Reported in \PR{18414}.
+
+      \item \code{time()} now (also) uses the
+      \code{ts.eps = getOption("ts.eps")}
+      argument and thus by default rounds values very close to the start (or
+      end) of a year.  Based on a proposal by Andreï V. Kostyrka on R-help.
+
+      \item Printing of a \code{factanal()} result with just one factor and
+      \code{sort=TRUE} now works regularly, fixing \PR{17863} by Timothy
+      Bates, thanks to the \sQuote{R Contributors} working group.
+
+      \item Printing 0-length objects of class
+      \code{"factor"}, \code{"roman"}, \code{"hexmode"},
+      \code{"octmode"}, \code{"person"}, \code{"bibentry"}, or
+      \code{"citation"} now prints something better, one
+      of which fixes \PR{18422}, reported by Benjamin Feakins.
+
+      \item \code{Sys.timezone()} queries \command{timedatectl} only if
+      \command{systemd} is loaded; addressing a report by Jan Gorecki in
+      \PR{17421}.
+   }
+  }
+}
+
+\section{\Rlogo CHANGES IN R 4.2.2 patched}{
+  \subsection{C-LEVEL FACILITIES}{
+    \itemize{
+      \item The definition of \code{DL_FUNC} in \file{R_ext/Rdynload.h}
+      has been changed to be fully C-compliant.  This means that
+      functions loaded \emph{via} for example \code{R_GetCCallable} need
+      to be cast to an appropriate type if they have any arguments.
+
+      \item \code{.Machine} has a new element \code{sizeof.time_t} to
+      identify old systems with a 32-bit type and hence a limited range
+      of date-times (and limited support for dates millions of years
+      from present).
+    }
+  }
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item As \code{"POSIXlt"} objects may be \dQuote{partially filled}
+      and their list components meant to be recycled, \code{length()} now
+      is the length of the longest component.
+
+      \item \code{as.POSIXlt.Date()} could underflow for dates in the
+      far past (more than half a million years BCE).
+
+      \item \code{as.Date.POSIXlt(x)} would return \code{"1970-01-01"}
+      instead of \code{NA} in R 4.2.2, e.g., for \preformatted{
+	x <- as.POSIXlt(c("2019-01-30","2001-1-1"))
+	x$mon <- c(0L, NA); as.Date(x)}
+
+      \item \command{R CMD check} failed to apply enabled
+      \env{_R_CHECK_SUGGESTS_ONLY_} to examples and vignettes
+      (regression in \R 4.2.0).
+
+      \item \command{R CMD check} did not re-build vignettes in
+      separate processes by default (regression in \R 4.2.0).
+
+      \item Running examples from HTML documentation now restores
+      previous knitr settings and options (\PR{18420}).
     }
   }
 }
 
-\section{\Rlogo CHANGES IN R 4.2.1 patched}{
+\section{\Rlogo CHANGES IN R 4.2.2}{
   \subsection{NEW FEATURES}{
     \itemize{
       \item \code{tools::Rdiff(useDiff = TRUE)} checks for the presence
@@ -292,6 +436,10 @@
       The \verb{\mathscr} \LaTeX command is also provided (via the
       \samp{mathrsfs} package, if available, or the \samp{amsfonts}
       bundle otherwise), fulfilling the wish of \PR{18398}.
+
+      \item (Windows) The default format of \code{readClipboard()} and
+      \code{writeClipboard()} has been changed to \code{13}
+      (\code{CF_UNICODETEXT}).
     }
   }
 
@@ -312,6 +460,9 @@
 
   \subsection{BUG FIXES}{
     \itemize{
+      \item \code{Rscript -e} would fail if \file{stdin} were closed
+      (Reported by Henrik Bengtsson.)
+
       \item \code{qt(*, log.p=TRUE)} in outer tails no longer produces
       \code{NaN} in its final steps, thus fixing \PR{18360}.
 
@@ -2433,7 +2584,7 @@
       \item \code{as.Date(<char>)} now also works with an initial
       \code{""}, thanks to Michael Chirico's \PR{17909}.
 
-      \item \code{isS3stdGeneric(f)} now detects an S3 generic also when it
+      \item \code{isS3stdGeneric(f)} now detects an S3 generic also when
       it is \code{trace()}d, thanks to Gabe Becker's \PR{17917}.
 
       \item \code{R_allocLD()} has been fixed to return memory aligned for
@@ -3295,7 +3446,7 @@
       \item \command{Rterm} now accepts enhanced/arrow keys also with
       ConPTY.
 
-      \item \R can can now be started \emph{via} the launcher icon in a
+      \item \R can now be started \emph{via} the launcher icon in a
       user documents directory whose path is not representable in the
       system encoding.
 
@@ -3314,10 +3465,10 @@
     \item Older news can be found in text format in files
     \ifelse{html}{\href{../NEWS.0}{NEWS.0}, \href{../NEWS.1}{NEWS.1},
       \href{../NEWS.2}{NEWS.2} and
-      and \href{../NEWS.3}{NEWS.3}}{\file{NEWS.0}, \file{NEWS.1},
+      \href{../NEWS.3}{NEWS.3}}{\file{NEWS.0}, \file{NEWS.1},
       \file{NEWS.2} and \file{NEWS.3}}
     in the \file{doc} directory.  News in HTML format for
-    \R  versions 3.x and from 2.10.0 to 2.15.3 is available at
+    \R  versions 3.x and from 2.10.0 to 2.15.3 are available at
     \ifelse{html}{\url{NEWS.3.html}}{\file{doc/html/NEWS.3.html}}
     and
     \ifelse{html}{\url{NEWS.2.html}}{\file{doc/html/NEWS.2.html}}.

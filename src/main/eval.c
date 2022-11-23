@@ -29,7 +29,7 @@
 #include <Rinterface.h>
 #include <Fileio.h>
 #include <R_ext/Print.h>
-
+#include <errno.h>
 
 static SEXP bcEval(SEXP, SEXP, Rboolean);
 
@@ -184,6 +184,12 @@ static void lineprof(char* buf, SEXP srcref)
 static pthread_t R_profiled_thread;
 #endif
 
+#if defined(__APPLE__)
+#include <mach/mach_init.h>
+#include <mach/mach_port.h>
+static mach_port_t R_profiled_thread_id;
+#endif
+
 static RCNTXT * findProfContext(RCNTXT *cptr)
 {
     if (! R_Filter_Callframes)
@@ -221,14 +227,28 @@ static void doprof(int sig)  /* sig is ignored in Windows */
     size_t bigv, smallv, nodes;
     size_t len;
     int prevnum = R_Line_Profiling;
+    int old_errno = errno;
 
     buf[0] = '\0';
 
 #ifdef Win32
     SuspendThread(MainThread);
+#elif defined(__APPLE__)
+    /* Using Mach thread API to detect whether we are on the main thread,
+       because pthread_self() sometimes crashes R due to a page fault when
+       the signal handler runs just after the new thread is created, but
+       before pthread initialization has been finished. */
+    mach_port_t id = mach_thread_self();
+    mach_port_deallocate(mach_task_self(), id);
+    if (id != R_profiled_thread_id) {
+	pthread_kill(R_profiled_thread, sig);
+	errno = old_errno;
+	return;
+    }
 #elif defined(HAVE_PTHREAD)
     if (! pthread_equal(pthread_self(), R_profiled_thread)) {
 	pthread_kill(R_profiled_thread, sig);
+	errno = old_errno;
 	return;
     }
 #endif /* Win32 */
@@ -344,7 +364,7 @@ static void doprof(int sig)  /* sig is ignored in Windows */
 #ifndef Win32
     signal(SIGPROF, doprof);
 #endif /* not Win32 */
-
+    errno = old_errno;
 }
 
 #ifdef Win32
@@ -458,6 +478,12 @@ static void R_InitProfiling(SEXP filename, int append, double dinterval,
     error("profiling requires 'pthread' support");
 #endif
 
+#if defined(__APPLE__)
+    /* see comment in doprof for why R_profiled_thread is not enough */
+    R_profiled_thread_id = mach_thread_self();
+    mach_port_deallocate(mach_task_self(), R_profiled_thread_id);
+#endif
+
     signal(SIGPROF, doprof);
 
     /* The macOS implementation requires normalization here:
@@ -473,7 +499,7 @@ static void R_InitProfiling(SEXP filename, int append, double dinterval,
     */ 
     itv.it_interval.tv_sec = interval / 1000000;
     itv.it_interval.tv_usec =
-	(suseconds_t)(interval - itv.it_interval.tv_sec * 10000000);
+	(suseconds_t)(interval - itv.it_interval.tv_sec * 1000000);
     itv.it_value.tv_sec = interval / 1000000;
     itv.it_value.tv_usec =
 	(suseconds_t)(interval - itv.it_value.tv_sec * 1000000);
@@ -512,6 +538,18 @@ SEXP do_Rprof(SEXP args)
     bufsize = asInteger(CAR(args));
     if (bufsize < 0)
 	error(_("invalid '%s' argument"), "bufsize");
+
+#if defined(linux) || defined(__linux__)
+    if (dinterval < 0.01) {
+	dinterval = 0.01;
+	warning(_("interval too short for this platform, using '%f'"), dinterval);
+    }
+#else
+    if (dinterval < 0.001) {
+	dinterval = 0.001;
+	warning(_("interval too short, using '%f'"), dinterval);
+    }
+#endif
 
     filename = STRING_ELT(filename, 0);
     if (LENGTH(filename))

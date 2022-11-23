@@ -1607,7 +1607,7 @@ sources.)
 These are Apple Installer packages.  If you encounter any problem during
 the installation, please check the Installer log by clicking on the
 ``Window'' menu and item ``Installer Log''. The full output (select
-``Show All Log'') is useful for tracking down problems.  Note the the
+``Show All Log'') is useful for tracking down problems.  Note that the
 installer is clever enough to try to upgrade the last-installed version
 of the application where you installed it (which may not be where you
 want this time @dots{}).
@@ -3398,6 +3398,15 @@ manuals.
 The essential programs should be in your @env{PATH} at the time
 @command{configure} is run: this will capture the full paths.
 
+For date-times to work correctly it is essential that the tables
+defining time zones are installed: these are usually in an OS component
+named something like @code{tzdata}. On most OSes they are required
+@c with glibc by glibc-common
+but installations of Alpine Linux have been seen without them.  As from
+@R{} 4.3.0 there is a @command{configure} check that recent date-times
+to work correctly in different time zones which catches this when
+installing from source (but not for binary distributions).
+
 Those distributing binary versions of @R{} may need to be aware of the
 licences of the external libraries it is linked to (including `useful'
 libraries from the next section).  The @code{liblzma} library is in the
@@ -4898,9 +4907,10 @@ certificates: this is worked around in @R{}'s test suite.
 32-bit versions will be if possible unless @option{--disable-largefile}
 is specified.
 
-Note that 32-bit @code{glibc} before version 2.29 uses a 32-bit
+Note that some distributions of 32-bit @code{glibc} use a 32-bit
 @code{time_t} type, so to pass all the date-time checks needs @R{} built
 with flag @option{--with-internal-tzcode}.
+@c true even of glibc 2.35 in Fedora 36.
 
 Users of @cputype{ix86} CPUs with SSE2 support@footnote{Likely all since
 2005, including Pentium 4 and all @cputype{x86_64} CPUs with 32-bit
@@ -5317,7 +5327,7 @@ generate @cputype{x86_64} code @dots{}.
 
 Updating an @cputype{arm64} build will often fail because of the bug
 described at @uref{https://openradar.appspot.com/FB8914243} but @emph{ab
-initio} builds work.
+initio} builds work.  This has been far rarer from macOS 13.
 
 
 @c As from Command Line Tools version 12,
@@ -5326,11 +5336,16 @@ initio} builds work.
 @c external software.
 
 @menu
-* Note for Catalina and later::
+* Notes for Catalina and later::
 @end menu
 
-@node Note for Catalina and later,  , Prerequisites, Prerequisites
-@subsubsection Note for Catalina and later
+@node Notes for Catalina and later,  , Prerequisites, Prerequisites
+@subsubsection Notes for Catalina and later
+
+If you are using the macOS 13 SDK@footnote{@command{ls -l `xcrun
+-show-sdk-path`} in a terminal will show you which SDK is selected.},
+you will need to add something like @code{-mmacosx-version-min=12.0} to
+@samp{CFLAGS}.
 
 The default security settings for Catalina and later can make it
 difficult to install recently-built Apple packages which have not been
@@ -5346,6 +5361,17 @@ from @uref{https://mac.R-project.org/}.
 If you run into problems with `quarantine' for tarballs downloaded in a
 browser, consider using @command{curl -OL} to download (as illustrated
 above) or @command{xattr -c} to remove extended attributes.
+
+@command{configure} defaults to @option{--with-internal-tzcode} on
+macOS.  The native implementation was unusable on earlier versions of
+even 64-bit macOS (with a 32-bit @code{time_t} and/or timezone tables
+missing information beyond the 32-bit range).  For, e.g.@:, macOS 12.6
+option @option{--without-internal-tzcode} can be used to override this
+and @R{} contains sufficient workarounds (for example, the native code
+fails to recognize dates with a negative @code{tm_year}, that is dates
+before 1900) for @R{} to pass its checks.  However, there are
+discrepancies, notably in Europe in the 1900s and 1940s, even though
+the Olson database contains the correct information.
 
 @node Fortran compilers, Cairo graphics, Prerequisites, macOS
 @subsection Fortran compilers
@@ -5557,7 +5583,7 @@ non-default options
 were used. (@option{--enable-R-framework} implies @option{--enable-R-shlib}.)
 
 Configure option @option{--with-internal-tzcode} is the default on macOS,
-as the system implementation of time zones does not work correctly for
+as the system implementation of time zones did not work correctly for
 times before 1902 or after 2037 (despite using a 64-bit @code{time_t}).
 
 The main @TeX{} implementation used by the developers is
@@ -5861,170 +5887,6 @@ have version @code{5}).
 The @acronym{CRAN} binary packages are built with the Apple compiler on
 the oldest supported version of macOS, which avoids the first two and
 any issues with C++ libraries.
-
-@c @node `Apple Silicon', Building for Intel on arm64, Building binary packages, macOS
-@c @subsection @samp{arm64} aka `Apple Silicon'
-
-@c @menu
-@c * Native builds::
-@c @end menu
-
-@c In November 2020 Apple launched Macs using `Apple Silicon': this architecture
-@c has unfortunately many names, including @cputype{aarch64} (in the FOSS world)
-@c @cputype{arm64} and @cputype{arm64e} (by Apple): the machines are also
-@c known as `M1', Apple's name for their (first-generation) CPU.
-
-@c It is possible to build and run @R{} and almost all packages for
-@c @cputype{x86_64} using `Rosetta' emulation.  To do so, install all the
-@c prerequisites and other software described above, but include the flag
-@c @option{-arch x86_64} for @command{clang} and @command{clang++}, for
-@c example with a @file{config.site} file containing
-
-@c @example
-@c CC="clang -arch x86_64"
-@c OBJC=$CC
-@c CXX="clang++ -arch x86_64"
-@c FC="/usr/local/gfortran/bin/gfortran -mtune=native -mmacosx-version-min=10.13"
-@c @end example
-
-@c To correctly set the architecture (which will be auto-detected as
-@c @code{aarch64}), use something like
-
-@c @example
-@c /path/to/configure --build=x86_64-apple-darwin20
-@c @end example
-
-@c @node Native builds,  , `Apple Silicon', `Apple Silicon'
-@c @subsubsection Native builds
-
-@c This section follows the @acronym{CRAN} distribution in using
-@c @file{/opt/R/arm64} rather than @file{/usr/local}: this largely allows
-@c natively-compiled software to co-exist with compiled-for-Intel software
-@c (although the C/C++ compilers and linker will still search
-@c @file{/usr/local/include} and @file{/usr/local/lib}).
-
-@c No Fortran compiler has been released for this architecture although
-@c there are ports under development.  We used the fork of
-@c @command{gfortran} from @url{https://github.com/iains/gcc-darwin-arm64}
-@c of which there are binary distributions at
-@c @uref{https://mac.r-project.org/tools/} and
-@c @uref{https://github.com/fxcoudert/gfortran-for-macOS/releases/}.  It
-@c seems some of these have been built using the SDK path for Xcode and not
-@c that for the Command Line Tools which causes some problems@footnote{such
-@c as being unable to find @code{-lm}.} when using the Fortran compiler to
-@c link: to fix that change the symbolic link
-@c @file{/opt/R/arm64/gfortran/SDK} to point to your SDK, e.g.@: to
-@c @file{/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk} (the
-@c appropriate path can be found by running @command{xcrun
-@c -show-sdk-path}).  (The distribution at
-@c @uref{https://mac.r-project.org/tools/} includes a script
-@c @example
-@c /opt/R/arm64/gfortran/bin/gfortran-update-sdk
-@c @end example
-@c @noindent
-@c to do this.)
-
-@c A release of XQuartz 2.8.1 is available @emph{via}
-@c @uref{https://www.xquartz.org/releases/}: this is dual-architecture so
-@c supports both @cputype{arm64} and @cputype{x86_64} builds.
-
-@c Binary builds of the prerequisites are available at
-@c @uref{https://mac.r-project.org/bin/darwin20/arm64/}.  (The simplest way
-@c to get Tcl/Tk is to install if from the @R{} binary package installer.)
-@c These unpack into @file{/opt/R/arm64}: it is simplest to first create
-@c that directory and adjust its ownership if desired:
-
-@c @example
-@c sudo mkdir -p /opt/R/arm64
-@c sudo chown -R myaccount /opt/R
-@c @end example
-
-@c @noindent
-@c Then components can be downloaded and unpacked, for example
-
-@c @example
-@c curl -OL https://mac.r-project.org/libs-arm64/jpeg-9d-darwin.20-arm64.tar.gz
-@c tar -C/ -xf jpeg-9d-darwin.20-arm64.tar.gz
-@c @end example
-
-@c @noindent
-@c using @command{sudo} if necessary.  (There is an @R{} script at
-@c @uref{https://mac.r-project.org/bin/} to help with this.)
-
-@c If compiling from source, @code{pcre2} (at least up to version 10.39)
-@c needs to be built without JIT support (the default) as the @R{} build
-@c segfaults if that is enabled, so do run @code{make check} on your build.
-
-@c Add @file{/opt/R/arm64/bin} to the @env{PATH}, create a file
-@c @file{config.site} something like
-
-@c @example
-@c CC="clang -target arm64-apple-macos11"
-@c OBJC=$CC
-@c FC="/opt/R/arm64/gfortran/bin/gfortran -mtune=native"
-@c CXX="clang++ -target arm64-apple-macos11"
-@c CFLAGS="-falign-functions=8 -g -O2 -Wall -pedantic"
-@c CPPFLAGS=-I/opt/R/arm64/include
-@c FFLAGS="-g -O2 -mmacosx-version-min=11.0"
-@c LDFLAGS=-L/opt/R/arm64/lib
-@c R_LD_LIBRARY_PATH=/opt/R/arm64/lib
-@c @end example
-
-@c @noindent
-@c (the first flag in @code{CFLAGS} is needed to inter-work with the
-@c current @command{gfortran} without segfaulting in some packages).  Then
-@c configure @R{} using something like
-
-@c @example
-@c /path/to/configure --enable-R-shlib --enable-memory-profiling \
-@c   --with-tcl-config=/opt/R/arm64/lib/tclConfig.sh \
-@c   --with-tk-config=/opt/R/arm64/lib/tkConfig.sh \
-@c   PKG_CONFIG_PATH=/opt/R/arm64/lib/pkgconfig:/usr/lib/pkgconfig \
-@c   JAVA_HOME=/path/to/jdk-17.jdk/Contents/Home
-@c @end example
-
-@c Updating a build may fail because of the bug
-@c described at @uref{https://openradar.appspot.com/FB8914243} but
-@c @emph{ab initio} builds work.
-
-@c As with Intel builds, the @code{Accelerate} library could be used
-@c @emph{via} the configuration option
-
-@c @example
-@c --with-blas="-framework Accelerate"
-@c @end example
-
-@c @noindent
-@c Some @acronym{CRAN} builds of @R{} can be
-@c switched@footnote{@url{https://cran.r-project.org/bin/macosx/RMacOSX-FAQ.html#Which-BLAS-is-used-and-how-can-it-be-changed_003f}}
-@c to use it.
-
-@c It is possible to build external C/C++ libraries containing both
-@c architectures which could then be used for building packages.  A typical
-@c configure line might be
-
-@c @example
-@c ./configure --enable-static --disable-shared \
-@c CC='clang -arch arm64 -arch x86_64' CFLAGS=-O2 \
-@c CXX='clang++ -arch arm64 -arch x86_64' CXXFLAGS=-O2 \
-@c CPP='clang -E' CXXCPP='clang++ -E'
-@c @end example
-
-@c @noindent
-@c Such libraries installed into the usual default of @file{/usr/local}
-@c will be usable for both @cputype{arm64} and @cputype{x86_64} builds.
-
-@c https://developer.apple.com/documentation/xcode/building_a_universal_macos_binary
-@c According to Apple, C/C++ code intended only for this architecture can
-@c be enclosed in an @code{#ifdef} block using macro @code{__arm64__} or
-@c @code{__aarch64__} : you may want to also condition on @code{__APPLE__}
-@c as those macros are defined on other OSes, at least for @command{clang}
-@c and @command{gcc} (@code{__aarch64__}).
-
-@c If building software or installing source packages with @command{cmake}
-@c (or a non-Apple @command{make}) ensure it contains the @cputype{arm64}
-@c architecture (use @command{file} to be sure).  Running compilers from an
-@c @cputype{x86_64} executable will generate @cputype{x86_64} code @dots{}.
 
 @node Building for Intel on arm64, Installer, Building binary packages, macOS
 @subsection Building for Intel on @samp{arm64}

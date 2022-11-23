@@ -2010,6 +2010,8 @@ fi
 R_CHECK_FUNCS([gettimeofday utimes], [#include <sys/time.h>])
 R_CHECK_FUNCS([times], [#include <sys/times.h>])
 R_CHECK_FUNCS([gmtime_r localtime_r], [#include <time.h>])
+dnl BSD extension available on glibc and macOS -- but fails on maOS pre-1900
+dnl R_CHECK_FUNCS([timegm], [#include <time.h>])
 R_CHECK_FUNCS([nl_langinfo], [#include <langinfo.h>])
 R_CHECK_FUNCS([access chdir execv ftruncate getcwd geteuid getuid link readlink symlink sysconf],
 [#ifdef HAVE_UNISTD_H
@@ -2163,8 +2165,22 @@ case "${host_os}" in
 esac
 fi
 if test "${use_internal_tzcode}" != yes; then
+  R_WORKING_MKTIME
+  if test "x${r_cv_working_mktime}" != xyes; then
+    AC_MSG_ERROR([date-time conversions do not work in 2020 -- is tzdata installed?])
+  fi
   R_MKTIME_ERRNO
   R_FUNC_MKTIME
+  R_FUNC_MKTIME2
+  R_FUNC_MKTIME3
+else
+  AC_DEFINE(MKTIME_SETS_ERRNO, 1, [Define if mktime sets errno.])
+  AC_DEFINE(HAVE_WORKING_MKTIME_AFTER_2037, 1,
+            [Define if your mktime works correctly after 2037.])
+  AC_DEFINE(HAVE_WORKING_MKTIME_BEFORE_1902, 1,
+            [Define if your mktime works correctly before 1902.])
+  AC_DEFINE(HAVE_WORKING_MKTIME_BEFORE_1970, 1,
+            [Define if your mktime works correctly before 1970.])
 fi
 
 if test x${use_internal_iswxxxxx} = xdefault; then
