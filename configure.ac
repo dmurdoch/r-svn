@@ -2009,6 +2009,7 @@ if test "${ac_cv_have_decl_stat}" = "no"; then
 fi
 R_CHECK_FUNCS([gettimeofday utimes], [#include <sys/time.h>])
 R_CHECK_FUNCS([times], [#include <sys/times.h>])
+dnl These are POSIX functions included by C23
 R_CHECK_FUNCS([gmtime_r localtime_r], [#include <time.h>])
 dnl BSD extension available on glibc and macOS -- but fails on maOS pre-1900
 dnl R_CHECK_FUNCS([timegm], [#include <time.h>])
@@ -2023,13 +2024,6 @@ R_CHECK_FUNCS([sched_setaffinity sched_getaffinity], [#include <sched.h>])
 R_CHECK_FUNCS([utime], [#include <utime.h>])
 ## POSIX.1-2008 preferred form
 R_CHECK_FUNCS([utimensat], [#include <sys/stat.h>])
-## Used to avoid a problem with some Xcode 9 updates on macOS 10.12 (Darwin 16)
-case "${host_os}" in
-   darwin1[[0123456]].*)
-     AC_DEFINE(MACOS_SIERRA, 1, [macOS 10.12 (Sierra) or earlier])
-   ;;
-esac
-AC_SUBST(MACOS_SIERRA)
 ## clock_gettime is POSIX 1993, but not on macOS prior to 10.12 (Sierra)
 ## Some OSes need -lrt: Linux (for glibc versions before 2.17), Solaris,
 ## not FreeBSD. 
@@ -2133,7 +2127,7 @@ AM_LANGINFO_CODESET
 
 ## Do we need substitutes?
 ## mkdtemp is not on Solaris 10, added in POSIX 2008
-## strdup strncasecmp were first required in POSIX 2001.
+## strdup strncasecmp were first required in POSIX 2001.  strdup is C23
 AC_REPLACE_FUNCS([mkdtemp strdup strncasecmp])
 ## Enable declarations in Defn.h?
 AC_CHECK_DECLS([mkdtemp, strdup, strncasecmp])
@@ -2815,6 +2809,14 @@ case "${host_os}" in
     AC_DEFINE(R_PROFILING, 1, [Define this to enable R-level profiling.])
     ;;
 esac
+
+dnl record compiler versions
+CC_VER=`${CC} --version | ${SED} -n 1p`
+FC_VER=`${FC} --version | ${SED} -n 1p`
+AC_DEFINE_UNQUOTED(CC_VER, "${CC_VER}", [Version of C Compiler])
+AC_SUBST(CC_VER)
+AC_DEFINE_UNQUOTED(FC_VER, "${FC_VER}", [Version of Fortran Compiler])
+AC_SUBST(FC_VER)
 
 ### * Output.
 

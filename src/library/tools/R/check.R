@@ -2492,9 +2492,9 @@ add_dummies <- function(dir, Log)
 
                 Rcmd <- paste(opWarn_string, "\n",
                               if (do_install)
-                              sprintf("tools::checkDocStyle(package = \"%s\")\n", pkgname)
+                                  sprintf("tools::checkDocStyle(package = \"%s\")\n", pkgname)
                               else
-                              sprintf("tools::checkDocStyle(dir = \"%s\")\n", pkgdir))
+                                  sprintf("tools::checkDocStyle(dir = \"%s\")\n", pkgdir))
                 out <- R_runR2(Rcmd)
                 if (length(out)) {
                     if (!any) noteLog(Log)
@@ -3659,10 +3659,14 @@ add_dummies <- function(dir, Log)
                 pat2 <- paste("possibly from", sQuote("(read|write)"))
                 pat3 <- paste("possibly from", sQuote("close"))
                 pat4 <- paste("possibly from", sQuote("open"))
+                pat5 <- paste("possibly from", sQuote("sprintf"))
+                pat6 <- paste("possibly from", sQuote("vsprintf"))
                 if(haveObjs &&
                    (any(grepl(pat1, out)) && !any(grepl(pat2, out))) ||
                    (any(grepl(pat3, out)) && !any(grepl(pat4, out))) ||
-                   (any(grepl(pat4, out)) && !any(grepl(pat3, out))))
+                   (any(grepl(pat4, out)) && !any(grepl(pat3, out))) ||
+                   any(grepl(pat5, out)) || any(grepl(pat6, out))
+                   )
                     warningLog(Log)
                 else noteLog(Log)
             }
@@ -3674,11 +3678,11 @@ add_dummies <- function(dir, Log)
                 if(haveObjs)
                     c("Compiled code should not call entry points which",
                       "might terminate R nor write to stdout/stderr instead of",
-                      "to the console, nor use Fortran I/O nor system RNGs.\n")
+                      "to the console, nor use Fortran I/O nor system RNGs nor [v]sprintf.\n")
                 else
                     c("Compiled code should not call entry points which",
                       "might terminate R nor write to stdout/stderr instead of",
-                      "to the console, nor use Fortran I/O nor system RNGs.",
+                      "to the console, nor use Fortran I/O nor system RNGs nor [v]sprintf.",
                       "The detected symbols are linked",
                       "into the code but might come from libraries",
                       "and not actually be called.\n")
@@ -4789,7 +4793,8 @@ add_dummies <- function(dir, Log)
                               out, value = TRUE, useBytes = TRUE)
                 ltx_err <- any(grepl("LaTeX error", out, ignore.case = TRUE,
                                      useBytes = TRUE))
-                iskip <- grep("^Note: skipping .* dependencies:", out)
+                iskip <- grep("^Note: skipping .* dependencies:", out,
+                              useBytes = TRUE)
                 if (status) {
                     keep <- as.numeric(Sys.getenv("_R_CHECK_VIGNETTES_NLINES_",
                                                   "25"))
@@ -5068,8 +5073,8 @@ add_dummies <- function(dir, Log)
                                     sub("[Rr]d$", "html", results2[, "path"]),
                                     results2[, "line"],
                                     results2[, "col"],
-                            	    results2[, "srcFile"],
-                            	    results2[, "srcLine"],
+                                    results2[, "srcFile"],
+                                    results2[, "srcLine"],
                                     results2[, "msg"])))
             }
         }
@@ -5332,6 +5337,9 @@ add_dummies <- function(dir, Log)
 
                 if (install != "check")
                     lines <- readLines(outfile, warn = FALSE)
+
+                lines00 <- grep("^using (C compiler|C[+][+] compiler|Fortran conpiler|SDK)",
+                                lines, value = TRUE)
 
                 lines0 <- lines
                 warn_re <- c("^WARNING:",
@@ -5770,6 +5778,10 @@ add_dummies <- function(dir, Log)
                     printLog0(Log, sprintf("See %s for details.\n",
                                            sQuote(outfile)))
                 } else resultLog(Log, "OK")
+                if (length(lines00)) {
+                    ll <- sub("using", "used", lines00)
+                    for (l in ll)  messageLog(Log, l)
+                }
             }   ## end of case B
         }
     } ## {check_install()}
@@ -6668,6 +6680,8 @@ add_dummies <- function(dir, Log)
         if(is.na(prev)) Sys.setenv("_R_CHECK_MATRIX_DATA_" = "TRUE")
 ##        Sys.setenv("_R_NO_S_TYPEDEFS_" = "TRUE")
         Sys.setenv("_R_CHECK_NEWS_IN_PLAIN_TEXT_" = "TRUE")
+        Sys.setenv("_R_CHECK_BROWSER_NONINTERACTIVE_" = "TRUE")
+        Sys.setenv("_R_CHECK_AS_DATA_FRAME_EXPLICIT_METHOD_" = "TRUE")
         R_check_vc_dirs <- TRUE
         R_check_executables_exclusions <- FALSE
         R_check_doc_sizes2 <- TRUE
@@ -6814,6 +6828,14 @@ add_dummies <- function(dir, Log)
         messageLog(Log, "using ", R.version.string)
         messageLog(Log, "using platform: ", R.version$platform,
                    " (", 8*.Machine$sizeof.pointer, "-bit)")
+        vers <- R_compiled_by()
+        if (any(nzchar(vers))) {
+            messageLog(Log, "R was compiled by")
+            printLog(Log, paste("   ", vers, collapse = "\n"), "\n")
+        }
+        osV <- utils::osVersion
+        if(!is.null(osV))
+            messageLog(Log, "running under: ", osV)
         charset <-
             if (l10n_info()[["UTF-8"]]) "UTF-8" else utils::localeToCharset()
         messageLog(Log, "using session charset: ", charset)
@@ -6856,6 +6878,7 @@ add_dummies <- function(dir, Log)
         }
         setwd(pkg)
         pkgdir <- getwd()
+
         thispkg_src_subdirs <- thispkg_subdirs
         if (thispkg_src_subdirs == "yes-maybe") {
             ## now see if there is a 'configure' file
