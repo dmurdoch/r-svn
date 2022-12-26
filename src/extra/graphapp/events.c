@@ -33,6 +33,7 @@
    Handle mouse wheel scrolling
    Remove assumption that current->dest is non-NULL
    Add waitevent() function
+   Caret handling improvements (see comments in controls.c)
  */
 
 #include "internal.h"
@@ -330,16 +331,26 @@ static void handle_focus(object obj, int gained_focus)
 {
     if (gained_focus) {
 	obj->state |= GA_Focus;
-	if (obj->caretwidth < 0) {
-	    setcaret(obj, 0,0, -obj->caretwidth, obj->caretheight);
+	if ((!obj->caretexists) && obj->caretwidth == 0 && (obj->flags & SetUpCaret)) {
+	    /* set up a dummy caret to help NVDA initialization, see comment in
+	       console.c, newconsole */
+	    setcaret(obj, 0, 0, 2, 10);
 	    showcaret(obj, 1);
+	}	
+	if (obj->caretwidth < 0) {
+	    /* creates the caret object and restores obj->caretshowing */
+	    setcaret(obj, obj->caretx, obj->carety, -obj->caretwidth, obj->caretheight);
+	    if (obj->caretshowing)
+		/* redraw the caret in case it has been destroyed by a recursive redraw
+		   of the screen, e.g. via disable() when using the menu; such a redraw
+		   can happen while waiting for keyboard input */
+	        ShowCaret(obj->handle);
 	}
     } else {
 	obj->state &= ~GA_Focus;
-	if (obj->caretwidth > 0) {
-	    setcaret(obj, 0,0, -obj->caretwidth, obj->caretheight);
-	    showcaret(obj, 0);
-	}
+	if (obj->caretwidth > 0)
+	    /* destroys the caret object and preserves obj->caretshowing */	
+	    setcaret(obj, obj->caretx, obj->carety, -obj->caretwidth, obj->caretheight);
     }
     if ((! USE_NATIVE_BUTTONS) && (obj->kind == ButtonObject))
 	InvalidateRect(obj->handle, NULL, 0);

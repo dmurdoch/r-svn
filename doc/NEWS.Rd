@@ -20,9 +20,15 @@
 
   \subsection{NEW FEATURES}{
     \itemize{
-      \item The included BLAS sources have been updated to those
-      shipped with LAPACK version 3.10.1.  This causes some
-      (platform-dependent) changes to package check output.
+      \item The included BLAS sources have been updated to those shipped
+      with LAPACK version 3.10.1.  (This caused some platform-dependent
+      changes to package check output.)  And then to the sources from
+      LAPACK version 3.11 (with changes only to double complex
+      subroutines).
+
+      \item The LAPACK sources have been updated to version 3.11.0.  (No
+      new subroutines have been added, so this almost entirely bug
+      fixes.)
 
       \item The parser now signals \emph{classed} errors, notably in
       case of the pipe operator \code{|>}.  The error object and
@@ -88,9 +94,29 @@
       option \code{tryLogical = TRUE} with back compatible default.  When
       set to false, converts \code{"F"} or \code{"T"} columns to character.
 
-      \item \code{object.size(*, standard="SI")} uses the new unit prefixes
-      \code{"R"} and \code{"Q"} for sizes above \eqn{10^{27}} bytes, thanks
-      to Henrik Bengtsson's \PR{18435}.
+      \item Added new unit prefixes \code{"R"} and \code{"Q"} for
+      abbreviating (unrealistically large) sizes beyond \eqn{10^{27}} in
+      \code{standard = "SI"}, thanks to Henrik Bengtsson's \PR{18435}.
+
+      \item \code{as.data.frame()}'s default method now also works fine
+      with atomic objects inheriting from classes such as \code{"roman"},
+      \code{"octmode"} and \code{"hexmode"}, such fulfilling the wish of
+      \PR{18421}, by Benjamin Feakins.
+
+      \item The \code{as.data.frame.vector()} utility now errors for
+      wrong-length \code{row.names}.  It warned for almost six years, with
+      \dQuote{Will be an error!}.
+
+      \item \code{sessionInfo()} now also contains \code{La_version()} and
+      reports codepage and timezone when relevant, in both \code{print()}
+      and \code{toLatex()} methods which also get new option \code{tzone}
+      for displaying timezone information when \code{locale=FALSE}.
+
+      \item New function \code{R_compiled_by()} reports the C and
+      Fortran compilers used to build \R, if known.
+
+      \item \code{predict(<lm>, newdata=*)} no longer unnecessarily creates
+      an \code{offset} of all \code{0}s.
     }
   }
 
@@ -256,13 +282,42 @@
       \item \command{R CMD check} can optionally (but included in
       \option{--as-cran}) check whether HTML math rendering \emph{via}
       KaTeX works for the package \file{.Rd} files.
+
+      \item Non-interactive debugger invocations can be trapped by
+      setting the environment variable
+      \env{_R_CHECK_BROWSER_NONINTERACTIVE_} to a true value.  This is
+      enabled by \command{R CMD check --as-cran} to detect the use of
+      leftover \code{browser()} statements in the package.
+
+      \item The use of \code{sprintf} and \code{vsprintf} from C/C++ has
+      been deprecated in macOS 13 and is a known security risk.
+      \command{R CMD check} now reports (on all platforms) if their use
+      is found in compiled code: replace by \code{snprintf} or
+      \code{vsnprintf} respectively. [\bold{NB:} whether such calls get
+      compiled into the package is platform-dependent.]
+
+      \item Where recorded at installation, \command{R CMD check}
+      reports the C and Fortran compilers used to build \R.
+
+      It reports the OS in use (if known, as given by
+      \code{osVersion}) as well as that \R was built for.
+
+      \item \command{R CMD INSTALL} reports the compilers (and on
+      macOS, the SDK) used, and this is copied to the output of
+      \command{R CMD check}
     }
   }
 
   \subsection{DEPRECATED AND DEFUNCT}{
     \itemize{
       \item \code{default.stringsAsFactors()} is defunct.
-   }
+
+      \item Calling \code{as.data.frame.<class>()} directly (for 12 atomic
+      classes) is going to be formally deprecated, currently activated by
+      setting the environment variable
+      \env{_R_CHECK_AS_DATA_FRAME_EXPLICIT_METHOD_} to non-empty, which
+      also happens in \command{R CMD check --as-cran}.
+    }
   }
 
   \subsection{BUG FIXES}{
@@ -278,7 +333,7 @@
       requiring \code{Depends} packages; reported (with fix) in \PR{18331}
       by Mikael Jagan.
 
-      \item \code{R CMD Stangle}: improved message about \sQuote{Output}
+      \item \command{R CMD Stangle}: improved message about \sQuote{Output}
       files.
 
       \item \code{head(x, n)} and \code{tail(x, n)} now signal an error if
@@ -318,7 +373,8 @@
       longer split \verb{\arguments} and \verb{\value} lists at Rd comments.
 
       \item \code{tools::Rd2latex()} now correctly handles optional text
-      outside \verb{\item}s of argument lists.
+      outside \verb{\item}s of argument lists as well as bracketed text
+      at the beginning of sections, e.g., \verb{\value{[NULL]}}.
 
       \item \code{as.character(<POSIXt>)} now behaves more in line with the
       methods for atomic vectors such as numbers, and is no longer
@@ -365,6 +421,10 @@
       \item \code{Sys.timezone()} queries \command{timedatectl} only if
       \command{systemd} is loaded; addressing a report by Jan Gorecki in
       \PR{17421}.
+
+      \item The formula method of \code{cor.test()} had scoping problems
+      when \code{environment(formula)} was not the calling environment;
+      reported with a patch proposal by Mao Kobayashi in \PR{18439}.
    }
   }
 }
@@ -406,6 +466,17 @@
 
       \item Running examples from HTML documentation now restores
       previous knitr settings and options (\PR{18420}).
+
+      \item Quartz: fonts are now located using Core Graphics API
+      instead of deprecated ATS which is no longer supported in
+      macOS 13 SDK (\PR{18426}). This also addresses an issue where
+      the currently used font in the Quartz device context was not
+      correctly retained.
+
+      \item Math symbols in text drawing functions on Windows are again
+      rendered correctly (\PR{18440}).  This fixes a regression in \R 4.2.1
+      caused by a fix in \PR{18382} which uncovered an issue in GraphApp
+      due to which the symbol charset was not used with TT Symbol font face.
     }
   }
 }
@@ -1751,7 +1822,7 @@
       S4 object \code{xS4}.
 
       \item Rudimentary support for vi-style tags in \code{rtags()} and
-      \code{R CMD rtags} has been added.  (Based on a patch from Neal
+      \command{R CMD rtags} has been added.  (Based on a patch from Neal
       Fultz in \PR{17214}.)
 
       \item \code{checkRdContents()} is now exported from \pkg{tools}; it
