@@ -119,7 +119,7 @@ R_OS="${host_os}"
 AC_SUBST(R_OS)
 
 case "${host_os}" in
-  mingw*|windows*|winnt)
+  mingw*|windows*|winnt|msys)
     AC_DEFINE(Win32, 1,
               [Define according to your operating system type.])
     R_OSTYPE="windows"
@@ -787,6 +787,18 @@ R_PROG_OBJCXX
 R_DEFS=${DEFS}
 AC_SUBST(R_DEFS)
 
+## Other C standards -- first pass
+: ${CC17="${CC} -std=gnu17"}
+: ${C17FLAGS="${CFLAGS}"}
+AC_SUBST(CC17)
+AC_SUBST(C17FLAGS)
+: ${CC23="${CC} -std=gnu2x"}
+: ${C23FLAGS="${CFLAGS}"}
+AC_SUBST(CC23)
+AC_SUBST(C23FLAGS)
+r_c17_compiler="${CC17} ${C17FLAGS}"
+r_c23_compiler="${CC23} ${C23FLAGS}"
+
 ## Libtool.
 ## (Run this after selecting the Fortan compiler as AC_PROG_LIBTOOL
 ## checks for a Fortran 77 compiler and sets F77 accordingly.)
@@ -838,6 +850,9 @@ case "${host_os}" in
   darwin*)
     Rshlibpath_var=DYLD_FALLBACK_LIBRARY_PATH
     ;;
+  cygwin*|mingw*|windows*|winnt|msys)
+    Rshlibpath_var=PATH
+    ;;
   *)
     Rshlibpath_var=${shlibpath_var}
 esac
@@ -882,6 +897,7 @@ if test "${use_readline}" = yes; then
   if test "${use_readline}" = no; then
     ## only need ncurses if libreadline is not statically linked against it
     unset ac_cv_lib_readline_rl_callback_read_char
+    ## FIXME replace main, maybe by tputs
     AC_CHECK_LIB(ncurses, main, [],
                  AC_CHECK_LIB(tinfo, main, [],
                               AC_CHECK_LIB(termcap, main, [],
@@ -1135,7 +1151,7 @@ dnl     AC_CHECK_LIB(dld, shl_load, [R_XTRA_LIBS="-ldld ${R_XTRA_LIBS}"])
      ;;
   ## We no longer special-case Intel compilers on Linux:
   ## what we had dated from Nov 2005.
-  mingw*|windows*|winnt)
+  mingw*|windows*|winnt|msys)
     AC_DEFINE(HAVE_NO_SYMBOL_UNDERSCORE)
     ;;
   openbsd*)
@@ -1529,7 +1545,7 @@ dnl     ;;
     STATICR1="-Wl,--whole-archive"
     STATICR2="-Wl,--no-whole-archive"
     ;;
-  mingw*)
+  mingw*|msys)
     SHLIB_EXT=".dll"
     cpicflags=
     cxxpicflags=
@@ -1644,7 +1660,7 @@ R_SH_VAR_ADD(MAIN_LDFLAGS, [${main_ldflags}])
 : ${CPICFLAGS="${cpicflags}"}
 if test -z "${CPICFLAGS}"; then
   case "${host_os}" in
-    aix*|mingw*)
+    aix*|mingw*|msys)
       ;;
     *)
       AC_MSG_WARN([I could not determine CPICFLAGS.])
@@ -1656,7 +1672,7 @@ fi
 : ${FPICFLAGS="${fpicflags}"}
 if test -z "${FPICFLAGS}"; then
   case "${host_os}" in
-    aix*|mingw*)
+    aix*|mingw*|msys)
       ;;
     *)
       AC_MSG_WARN([I could not determine FPICFLAGS.])
@@ -1668,7 +1684,7 @@ fi
 : ${CXXPICFLAGS="${cxxpicflags}"}
 if test -n "${CXX}" -a -z "${CXXPICFLAGS}"; then
   case "${host_os}" in
-    aix*|mingw*)
+    aix*|mingw*|msys)
       ;;
     *)
       warn_cxxpicflags="I could not determine CXXPICFLAGS."
@@ -1989,7 +2005,7 @@ R_CHECK_FUNCS([select],
 #include <sys/time.h>  /* Earlier POSIX, HP-UX? */
 #endif])
 case "${host_os}" in
-  mingw*|windows*|winnt)
+  mingw*|windows*|winnt|msys)
   ;;
   *)
   if test "${ac_cv_have_decl_select}" = "no"; then
@@ -2074,7 +2090,7 @@ R_CHECK_FUNCS([thr_stksegment], [
 ## We don't need times() except as a fallback for getrusage and
 ## clock_gettime/gettimeofday -- but it is older and always there.
 case "${host_os}" in
-  mingw*)
+  mingw*|msys)
   ;;
   *)
     if test "${ac_cv_search_glob}" = "no"; then
@@ -2793,20 +2809,28 @@ AC_MSG_RESULT([using as R_SHELL for scripts ... ${R_SHELL}])
 
 ### * Win32 overrides
 case "${host_os}" in
-  mingw*)
+  mingw*|msys)
+    ## there are not needed with Rtools (detected correctly)
     AC_DEFINE(HAVE_ICONV, 1, [Define if you have the iconv() function.])
     AC_DEFINE(HAVE_ICONVLIST, 1, [Define if you have the `iconvlist' function.])
     AC_DEFINE(HAVE_ICONV_H, 1, [Define to 1 if you have the <iconv.h> header file.])
     AC_DEFINE(HAVE_JPEG, 1,[Define if you have the JPEG headers and libraries.])
     AC_DEFINE(HAVE_PNG, 1, [Define if you have the PNG headers and libraries.])
+    AC_DEFINE(HAVE_TIFF, 1, [Define this if libtiff is available.])    
+
+    ## these change what is detected with Rtools
     AC_DEFINE(HAVE_POSIX_SETJMP, 1, [Define if you have POSIX.1 compatible
                                      sigsetjmp/siglongjmp.])
+    AC_DEFINE(HAVE_DECL_SIGLONGJMP, 1, [Define to 1 if you have the declaration of `siglongjmp',
+                                       and to 0 if you don't.])
+    AC_DEFINE(HAVE_DECL_SIGSETJMP, 1, [Define to 1 if you have the declaration of `sigsetjmp',
+                                       and to 0 if you don't.])                                     
     AC_DEFINE(HAVE_TCLTK, 1, [Define if you have the Tcl/Tk headers and 
-                              libraries and want Tcl/Tk support to be built.] )
-    AC_DEFINE(HAVE_TIFF, 1, [Define this if libtiff is available.])
-    AC_DEFINE(HAVE_TIMES, 1, [Define to 1 if you have the `times' function.])
+                              libraries and want Tcl/Tk support to be built.])
     want_R_profiling=yes
     AC_DEFINE(R_PROFILING, 1, [Define this to enable R-level profiling.])
+    want_memory_profiling=yes
+    AC_DEFINE(R_MEMORY_PROFILING, 1, [Define this to enable memory profiling.])
     ;;
 esac
 
@@ -3074,6 +3098,8 @@ R is now configured for ${host}
   C++23 compiler:              ${r_cxx23_compiler}
   Fortran free-form compiler:  ${r_f95_compiler}
   Obj-C compiler:	       ${r_objc_compiler}
+  C17 compiler:                ${r_c17_compiler}
+  C23 compiler:                ${r_c23_compiler}
 
   Interfaces supported:        ${r_interfaces}
   External libraries:          ${r_external_libs}

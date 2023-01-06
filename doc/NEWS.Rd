@@ -23,12 +23,13 @@
       \item The included BLAS sources have been updated to those shipped
       with LAPACK version 3.10.1.  (This caused some platform-dependent
       changes to package check output.)  And then to the sources from
-      LAPACK version 3.11 (with changes only to double complex
+      LAPACK version 3.11.0 (with changes only to double complex
       subroutines).
 
       \item The LAPACK sources have been updated to version 3.11.0.  (No
       new subroutines have been added, so this almost entirely bug
-      fixes.)
+      fixes: Those fixes do affect some computations with \code{NaN}s,
+      including \R's @code{NA}.)
 
       \item The parser now signals \emph{classed} errors, notably in
       case of the pipe operator \code{|>}.  The error object and
@@ -110,13 +111,16 @@
       \item \code{sessionInfo()} now also contains \code{La_version()} and
       reports codepage and timezone when relevant, in both \code{print()}
       and \code{toLatex()} methods which also get new option \code{tzone}
-      for displaying timezone information when \code{locale=FALSE}.
+      for displaying timezone information when \code{locale = FALSE}.
 
       \item New function \code{R_compiled_by()} reports the C and
       Fortran compilers used to build \R, if known.
 
       \item \code{predict(<lm>, newdata=*)} no longer unnecessarily creates
       an \code{offset} of all \code{0}s.
+
+      \item \code{solve()} for complex inputs now uses argument \code{tol}
+      and by default checks for \sQuote{computational singularity}.
     }
   }
 
@@ -217,6 +221,25 @@
     }
   }
 
+  \subsection{INSTALLATION on WINDOWS}{
+    \itemize{
+      \item The makefiles and installer scripts for Windows have been
+      tailored to \file{Rtools43}, an update of the \file{Rtools42}
+      toolchain.  It is based on \command{gcc} 12 and newer versions of
+      MinGW-W64, binutils and libraries.  At this time R-devel can still
+      be built using Rtools42 without changes, but when R-devel is
+      installed via the installer, it will by default look for Rtools43.
+	  
+      \item Old make targets \code{rsync-extsoft} and 32-bit ones that
+      are no longer needed have been removed.
+
+      \item Default builds (including for packages) no longer select
+      C99.  Thus the C standard used is the default for the compiler,
+      which for the toolchain in \file{Rtools43} is C17.  (This is
+      consistent with Unix builds.)
+    }
+  }
+
   \subsection{PACKAGE INSTALLATION}{
     \itemize{
       \item \code{USE_FC_LEN_T} is the default: this uses the
@@ -232,6 +255,39 @@
       C++23 features beyond a check that the compiler reports a
       \code{__cplusplus} value greater than that in the C++20 standard.
       C++ feature tests should be used.
+
+      \item [Experimental, in progress]
+
+      There is some support for a package to indicate the version of the
+      C standard which should be used to compile it.  There are
+      currently two possibilities:
+      \describe{
+	\item{USE_C17}{Use a standard that is at most C17.  The
+	  intention is to allow legacy packages to still be installed when
+	  later C standards are preferred.
+	}
+	\item{USE_C23}{Use C23 (or in future, later).  Compiler/library
+	  support for C23 is still being implemented, but LLVM clang 15 and
+	  the upcoming GCC 13 have quite extensive support.
+	}
+      }
+      These can be specified as part of the \samp{SystemRequirements}
+      field in the package's \file{DESCRIPTION} file or \emph{via} options
+      \option{--use-C17} and \option{--use-C23} of \command{R CMD
+	INSTALL} and \command{R CMD SHLIB}.
+
+      For further details see \dQuote{Writing R Extensions} §1.2.5.
+
+      %% \item (Windows) A \file{src/Makefile.ucrt} or
+      %% \file{src/Makefile.win} file is now used after
+      %% \file{\var{R_HOME}/etc\var{R_ARCH}/Makeconf} and so no longer
+      %% needs to include that file itself.  It also uses a site
+      %% Makevars file in the same way as a package with a
+      %% @file{src/Makevars.win} file would.
+      
+      \item (Windows) The default C++ standard had accidentally been
+      left at C++11 when it was changed to C++14 on Unix.  It is now
+      C++14 as documented.
     }
   }
 
@@ -425,7 +481,11 @@
       \item The formula method of \code{cor.test()} had scoping problems
       when \code{environment(formula)} was not the calling environment;
       reported with a patch proposal by Mao Kobayashi in \PR{18439}.
-   }
+
+      \item \code{attach()} of an environment with active bindings now
+      preserves the active bindings.  Reported by Kevin Ushey in
+      \PR{18425}.
+    }
   }
 }
 
@@ -468,15 +528,29 @@
       previous knitr settings and options (\PR{18420}).
 
       \item Quartz: fonts are now located using Core Graphics API
-      instead of deprecated ATS which is no longer supported in
-      macOS 13 SDK (\PR{18426}). This also addresses an issue where
+      instead of deprecated ATS which is no longer supported in the
+      macOS 13 SDK (\PR{18426}).  This also addresses an issue where
       the currently used font in the Quartz device context was not
       correctly retained.
 
-      \item Math symbols in text drawing functions on Windows are again
+      \item (Windows) Math symbols in text drawing functions are again
       rendered correctly (\PR{18440}).  This fixes a regression in \R 4.2.1
       caused by a fix in \PR{18382} which uncovered an issue in GraphApp
       due to which the symbol charset was not used with TT Symbol font face.
+
+      \item (Windows) Installing a package with a
+      \file{src/Makefile.\{win,ucrt\}} file includes
+      \file{~/.R/Makevars.win64} in the search for user makevars, as
+      documented in \dQuote{R Installation and Administration} and done
+      for packages with a \file{src/Makevars.\{win,ucrt\}} file.
+
+      \item \code{format(<POSIXlt_w/_unbalanced_sec>, "....\%OS<n>")} with
+      \eqn{n > 0} no longer accidentally uses the unbalanced seconds,
+      thanks to Suharto Anggono's report (including patch) in \PR{18448}.
+
+      \item \code{solve.default(a, b)} works around issues with
+      some versions of LAPACK when \code{a} contains \code{NA} or
+      \code{NaN} values.
     }
   }
 }
